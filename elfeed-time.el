@@ -49,21 +49,6 @@ For information on possible specifiers, see `format-seconds'."
 (defvar-local elfeed-time-preprocess-function nil
   "A function called to transform an entry's content before it is displayed.")
 
-(defvar-local elfeed-time--premiere-entry nil
-  "Used to store the elfeed-entry object for extra processes.")
-(defvar-local elfeed-time--get-video-info-entry nil
-  "Used to store the elfeed-entry object while getting it's information.")
-
-(defcustom elfeed-time-ignore-private-videos nil
-  "Whether or not to ignore private youtube videos.
-This can be t, nil, or a function which is called with the entry
-and returns t or nil. Ignoring means the entry will automatically
-be marked as read."
-  :group 'elfeed-time
-  :type '(choice (const :tag "Don't ignore" nil)
-		 (const :tag "Ignore" t)
-		 function))
-
 (defcustom elfeed-time-youtube-dl-program (or (executable-find "yt-dlp")
 					      (executable-find "yt-dlc")
 					      (executable-find "youtube-dl"))
@@ -81,6 +66,22 @@ The entry with key t is a list of arguments for all programs."
   :type '(alist :key-type (choice string
 				  (const :tag "Arguments for all programs" t))
 		:value-type (repeat string)))
+
+(defcustom elfeed-time-ignore-private-videos nil
+  "Whether or not to ignore private youtube videos.
+This can be t, nil, or a function which is called with the entry
+and returns t or nil. Ignoring means the entry will automatically
+be marked as read."
+  :group 'elfeed-time
+  :type '(choice (const :tag "Don't ignore" nil)
+		 (const :tag "Ignore" t)
+		 function))
+
+(defvar-local elfeed-time--premiere-entry nil
+  "Used to store the elfeed-entry object for extra processes.")
+
+(defvar-local elfeed-time--get-video-info-entry nil
+  "Used to store the elfeed-entry object while getting it's information.")
 
 (defcustom elfeed-time-ffprobe-program-name (executable-find "ffprobe")
   "The location of the program used to get enclosure info."
@@ -370,6 +371,19 @@ without storing it permanently"
       (setq-local elfeed-time-preprocess-function #'elfeed-time-preprocess-content-readable) nil nil)
   (elfeed-show-refresh))
 
+(defun elfeed-time-premiere-parse (entry buffer-string)
+  "Parse the HTML source of the premiere associated with ENTRY
+to determine when it will go live."
+  (when (string-match (rx "\"startTimestamp\":\""
+			  (group (1+ (not "\""))) "\"")
+		      buffer-string)
+    (setf (elfeed-meta entry :et-premiere-time)
+	  (time-convert (encode-time (iso8601-parse
+				      (match-string 1 buffer-string)))
+			'integer))
+    (with-current-buffer (elfeed-search-buffer)
+      (elfeed-search-update-entry entry))))
+
 (defun elfeed-time-premiere-sentinal (process event-string)
   "Kill the buffer associated with PROCESS when EVENT-STRING
 indicates the process is finished."
@@ -385,19 +399,6 @@ indicates the process is finished."
   (unwind-protect
       (elfeed-time-premiere-parse entry (buffer-string))
     (kill-buffer (current-buffer))))
-
-(defun elfeed-time-premiere-parse (entry buffer-string)
-  "Parse the HTML source of the premiere associated with ENTRY
-to determine when it will go live."
-  (when (string-match (rx "\"startTimestamp\":\""
-			  (group (1+ (not "\""))) "\"")
-		      buffer-string)
-    (setf (elfeed-meta entry :et-premiere-time)
-	  (time-convert (encode-time (iso8601-parse
-				      (match-string 1 buffer-string)))
-			'integer))
-    (with-current-buffer (elfeed-search-buffer)
-      (elfeed-search-update-entry entry))))
 
 (defun elfeed-time-get-youtube-premiere-info (entry)
   "Fetch the time when ENTRY will go live as a Youtube Premiere."
