@@ -142,7 +142,7 @@ If STATS is true, return the space cleared in bytes."
 
 (defun elfeed-time-entry-meta-content (entry)
   "Return the elfeed-ref in ENTRY's content meta slot."
-  (elfeed-meta entry :content))
+  (elfeed-meta entry :et-content))
 (add-hook 'elfeed-time-gc-functions #'elfeed-time-entry-meta-content)
 
 (defun elfeed-time-current-entries (multiple-entries-p)
@@ -210,8 +210,8 @@ Adapted from `elfeed-curl--args'"
 	  (url-retrieve-synchronously (elfeed-entry-link entry) nil nil 30))
       (unwind-protect
 	  (progn
-	    (setf (elfeed-meta entry :content) (elfeed-ref (buffer-string))
-		  (elfeed-meta entry :content-type) 'html)
+	    (setf (elfeed-meta entry :et-content) (elfeed-ref (buffer-string))
+		  (elfeed-meta entry :et-content-type) 'html)
 	    (elfeed-untag entry 'preview))
 	(kill-buffer)))))
 
@@ -262,16 +262,16 @@ Adapted from `eww-readable'"
 				       (eww-highest-readability dom))))))
 
 (defun elfeed-time-extract-readable-content (entry)
-  "Set :content meta of ENTRY to a cleaned-up version of the same HTML (if applicable)"
+  "Set :et-content meta of ENTRY to a cleaned-up version of the same HTML (if applicable)"
   (interactive (list (elfeed-time-current-entries nil)))
   (when (or (member 'unreadable  (elfeed-entry-tags entry))
 	    (called-interactively-p 'any))
-    (let* ((meta-content-p (elfeed-meta entry :content))
+    (let* ((meta-content-p (elfeed-meta entry :et-content))
 	   (content (if meta-content-p
-			(elfeed-meta entry :content)
+			(elfeed-meta entry :et-content)
 		      (elfeed-entry-content entry)))
 	   (content-type (if meta-content-p
-			     (elfeed-meta entry :content-type)
+			     (elfeed-meta entry :et-content-type)
 			   (elfeed-entry-content-type entry))))
       (when (eq 'html content-type)
 	(let* ((feed (elfeed-entry-feed entry))
@@ -279,7 +279,7 @@ Adapted from `eww-readable'"
 	  (with-temp-buffer
 	    (insert (elfeed-deref content))
 	    (setf (buffer-string) (elfeed-time-make-html-readable (buffer-string) (and feed base)))
-	    (setf (elfeed-meta entry :content) (elfeed-ref (buffer-string)))
+	    (setf (elfeed-meta entry :et-content) (elfeed-ref (buffer-string)))
 	    (elfeed-untag entry 'unreadable)))))))
 ;; This hook will run after full content is fetched (25 depth)
 (add-hook 'elfeed-new-entry-hook #'elfeed-time-extract-readable-content 30)
@@ -306,12 +306,12 @@ Adapted from `elfeed-show-refresh--mail-style'"
            (tagsstr (mapconcat #'symbol-name tags ", "))
 	   (time-marker (make-marker))
            (nicedate (format-time-string "%a, %e %b %Y %T %Z" date))
-	   (meta-content-p (elfeed-meta elfeed-show-entry :content))
+	   (meta-content-p (elfeed-meta elfeed-show-entry :et-content))
 	   (content (elfeed-deref (if meta-content-p
-				      (elfeed-meta elfeed-show-entry :content)
+				      (elfeed-meta elfeed-show-entry :et-content)
 				    (elfeed-entry-content elfeed-show-entry))))
            (type (if meta-content-p
-		     (elfeed-meta elfeed-show-entry :content-type)
+		     (elfeed-meta elfeed-show-entry :et-content-type)
 		   (elfeed-entry-content-type elfeed-show-entry)))
            (feed (elfeed-entry-feed elfeed-show-entry))
            (feed-title (elfeed-feed-title feed))
@@ -351,7 +351,7 @@ Adapted from `elfeed-show-refresh--mail-style'"
       (goto-char (point-min))
       (when (or (< (window-end (selected-window) t)
 		   (point-max))
-		(integerp (elfeed-meta elfeed-show-entry :length-in-seconds)))
+		(integerp (elfeed-meta elfeed-show-entry :et-length-in-seconds)))
 	(goto-char time-marker)
 	(insert (format (propertize "Time: %s\n" 'face 'message-header-name)
 			(propertize (elfeed-time-format-seconds elfeed-time-format-string
@@ -366,7 +366,7 @@ Adapted from `elfeed-show-refresh--mail-style'"
   "Show the cleaned-up version of the current entry's content
 without storing it permanently"
   (interactive)
-  (if (elfeed-meta elfeed-show-entry :content)
+  (if (elfeed-meta elfeed-show-entry :et-content)
       (setq-local elfeed-time-preprocess-function #'elfeed-time-preprocess-content-readable) nil nil)
   (elfeed-show-refresh))
 
@@ -392,7 +392,7 @@ to determine when it will go live."
   (when (string-match (rx "\"startTimestamp\":\""
 			  (group (1+ (not "\""))) "\"")
 		      buffer-string)
-    (setf (elfeed-meta entry :premiere-time)
+    (setf (elfeed-meta entry :et-premiere-time)
 	  (time-convert (encode-time (iso8601-parse
 				      (match-string 1 buffer-string)))
 			'integer))
@@ -454,15 +454,15 @@ to determine when it will go live."
 				(cond
 				 ((string-match-p (rx "ERROR: This live event will begin in a few moments.")
 						  (buffer-string))
-				  (setf (elfeed-meta entry :premiere-time) (time-convert nil 'integer)))
+				  (setf (elfeed-meta entry :et-premiere-time) (time-convert nil 'integer)))
 				 ((and (string-match-p (rx line-start "ERROR: ")
 						       (buffer-string))
 				       (string-match-p (rx (or "Premieres in" "This live event"))
 						       (buffer-string)))
 				  (elfeed-time-get-youtube-premiere-info entry))
 				 ((string-match-p "ERROR: Private video" (buffer-string))
-				  (when (elfeed-meta entry :premiere-time)
-				    (setf (elfeed-meta entry :premiere-time) nil))
+				  (when (elfeed-meta entry :et-premiere-time)
+				    (setf (elfeed-meta entry :et-premiere-time) nil))
 				  (when (or (and (functionp elfeed-time-ignore-private-videos)
 						 (funcall elfeed-time-ignore-private-videos entry))
 					    elfeed-time-ignore-private-videos)
@@ -471,8 +471,8 @@ to determine when it will go live."
 			      (when (string-match-p "finished" event-string)
 				(let ((video-data (progn (goto-char (point-min))
 							 (json-parse-buffer))))
-				  (setf (elfeed-meta entry :length-in-seconds) (gethash "duration" video-data)
-					(elfeed-meta entry :content) (elfeed-ref (gethash "description" video-data)))
+				  (setf (elfeed-meta entry :et-length-in-seconds) (gethash "duration" video-data)
+					(elfeed-meta entry :et-content) (elfeed-ref (gethash "description" video-data)))
 				  (with-current-buffer (elfeed-search-buffer)
 				    (elfeed-search-update-entry entry))
 				  (when-let ((buffer-name (get-buffer (elfeed-show--buffer-name entry))))
@@ -487,13 +487,13 @@ to determine when it will go live."
 
 Adapted from `elfeed-show-refresh--mail-style'."
   (interactive (list (elfeed-time-current-entries nil)))
-  (let* ((meta-content-p (elfeed-meta entry :content))
+  (let* ((meta-content-p (elfeed-meta entry :et-content))
 	 (type (if meta-content-p
-		   (elfeed-meta entry :content-type)
+		   (elfeed-meta entry :et-content-type)
 		 (elfeed-entry-content-type entry)))
 	 (feed (elfeed-entry-feed entry))
 	 (content (elfeed-deref (if meta-content-p
-				    (elfeed-meta entry :content)
+				    (elfeed-meta entry :et-content)
 				  (elfeed-entry-content entry))))
 	 (base (and feed (elfeed-compute-base (elfeed-feed-url feed)))))
     (with-temp-buffer
@@ -501,7 +501,7 @@ Adapted from `elfeed-show-refresh--mail-style'."
         (if (eq type 'html)
             (elfeed-insert-html content base)
           (insert content)))
-      (setf (elfeed-meta entry :word-count)
+      (setf (elfeed-meta entry :et-word-count)
 	    (count-words (point-min) (point-max))))))
 
 (defun elfeed-time-ffprobe-supported-extensions ()
@@ -526,7 +526,7 @@ Adapted from `elfeed-show-refresh--mail-style'."
 
 					       (elfeed-time-ffprobe-supported-extensions)))
 				     (mapcar #'car (elfeed-entry-enclosures entry)))))
-    (setf (elfeed-meta entry :length-in-seconds)
+    (setf (elfeed-meta entry :et-length-in-seconds)
 	  (cl-loop for url in enclosures
 		   maximizing (cl-parse-integer
 			       (shell-command-to-string
@@ -557,15 +557,15 @@ operations, such as network requests."
 This is called many times as a part of sorting the elfeed-search
 buffer by entry-time, and should be used only for fast
 operations."
-  (or (let ((length (elfeed-meta entry :length-in-seconds)))
+  (or (let ((length (elfeed-meta entry :et-length-in-seconds)))
 	(when (numberp length)
 	  length))
-      (when (elfeed-meta entry :premiere-time)
-	(- (time-convert nil 'integer) (elfeed-meta entry :premiere-time)))
-      (when (and (numberp (elfeed-meta entry :word-count))
+      (when (elfeed-meta entry :et-premiere-time)
+	(- (time-convert nil 'integer) (elfeed-meta entry :et-premiere-time)))
+      (when (and (numberp (elfeed-meta entry :et-word-count))
 		 (not (zerop elfeed-time-reading-speed)))
 	(/ (* 60
-	      (elfeed-meta entry :word-count))
+	      (elfeed-meta entry :et-word-count))
 	   elfeed-time-reading-speed))
       0))
 
