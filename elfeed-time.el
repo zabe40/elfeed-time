@@ -216,10 +216,6 @@ Adapted from `elfeed-curl--args'"
 	    (elfeed-untag entry 'preview))
 	(kill-buffer)))))
 
-;; This hook needs to fire after entries are tagged (0 depth), and
-;; before we count words (50 depth)
-(add-hook 'elfeed-new-entry-hook #'elfeed-time-fetch-full-content 25)
-
 (defun elfeed-time-serialize-dom-attributes (attributes)
   "Return a string with ATTRIBUTES encoded as HTML node attributes."
   (mapconcat (lambda (attribute-pair)
@@ -282,8 +278,6 @@ Adapted from `eww-readable'"
 	    (setf (buffer-string) (elfeed-time-make-html-readable (buffer-string) (and feed base)))
 	    (setf (elfeed-meta entry :et-content) (elfeed-ref (buffer-string)))
 	    (elfeed-untag entry 'unreadable)))))))
-;; This hook will run after full content is fetched (25 depth)
-(add-hook 'elfeed-new-entry-hook #'elfeed-time-extract-readable-content 30)
 
 (defun elfeed-time-preprocess-content-readable (content content-type base)
   (if (eq content-type 'html)
@@ -361,7 +355,6 @@ Adapted from `elfeed-show-refresh--mail-style'"
 	(goto-char (point-min)))
       (set-marker time-marker nil))))
 
-(setf elfeed-show-refresh-function (elfeed-time-generate-refresh-mail-style-function))
 
 (defun elfeed-time-toggle-entry-readable ()
   "Show the cleaned-up version of the current entry's content
@@ -544,9 +537,6 @@ operations, such as network requests."
    ((member 'comics (elfeed-entry-tags entry)) nil) ;TODO find a way to estimate reading time for comics
    ((member 'podcast (elfeed-entry-tags entry)) (elfeed-time-get-enclosure-time entry))
    (t (elfeed-time-count-entry-words entry))))
-;; With a depth of 50, this runs after entries are tagged (0 depth), and full
-;; content is fetched if needed (25 depth)
-(add-hook 'elfeed-new-entry-hook #'elfeed-time-new-entry 50)
 
 (defun elfeed-time-compute-entry-time (entry)
   "Return the time it will take to read/watch/listen to ENTRY.
@@ -607,7 +597,6 @@ operations."
       (insert (propertize feed-title 'face 'elfeed-search-feed-face) " "))
     (when tags
       (insert "(" tags-str ")"))))
-(setf elfeed-search-print-entry-function #'elfeed-time-search-print-entry)
 
 (defun elfeed-time-compare-entries (entry-1 entry-2)
   "Compare how long it would take to read ENTRY-1 and ENTRY-2.

@@ -5,6 +5,21 @@
 1. =curl=
 2. =youtube-dl=, =yt-dlc=, or =yt-dlp= (preferred)
 3. =ffprobe=
+** Configuration
+#+begin_src elisp
+  (setf elfeed-time-reading-speed 250)
+  (setf elfeed-time-ignore-private-videos t)
+
+  (add-hook 'elfeed-new-entry-hook #'elfeed-time-fetch-full-content 25)
+  (add-hook 'elfeed-new-entry-hook #'elfeed-time-extract-readable-content 30)
+  (add-hook 'elfeed-new-entry-hook #'elfeed-time-new-entry 50)
+
+  (setf elfeed-search-sort-function #'elfeed-time-compare-entries)
+  (setf elfeed-sort-order 'ascending)
+
+  (setf elfeed-show-refresh-function (elfeed-time-generate-refresh-mail-style-function))
+  (setf elfeed-search-print-entry-function #'elfeed-time-search-print-entry)
+#+end_src
 ** Technical Limitations
 1. I haven't figured out a good way to determine the time of comics
 ** Epistemological Limitations
