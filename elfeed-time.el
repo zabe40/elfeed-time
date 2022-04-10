@@ -36,13 +36,13 @@
 (defcustom elfeed-time-reading-speed 200
   "The user's reading speed, in words per minute. Must not be 0."
   :group 'elfeed-time
-  :type '(number))
+  :type 'number)
 
 (defcustom elfeed-time-format-string "%h:%z%.2m:%.2s"
   "The format control string for displaying times for entries.
 For information on possible specifiers, see `format-seconds'."
   :group 'elfeed-time
-  :type 'boolean)
+  :type 'string)
 
 (defcustom elfeed-time-use-curl elfeed-use-curl
   "If non-nil, fetch full content using curl instead of `url-retrieve'."
@@ -57,7 +57,7 @@ For information on possible specifiers, see `format-seconds'."
 					      (executable-find "youtube-dl"))
   "The location of the program used to get video info."
   :group 'elfeed-time
-  :type '(string))
+  :type 'string)
 
 (defcustom elfeed-time-youtube-dl-args '(("yt-dlp" . ("--print" "%()j"))
 					 ("yt-dlc" . ("--dump-json"))
@@ -89,7 +89,7 @@ be marked as read."
 (defcustom elfeed-time-ffprobe-program-name (executable-find "ffprobe")
   "The location of the program used to get enclosure info."
   :group 'elfeed-time
-  :type '(string))
+  :type 'string)
 
 (defcustom elfeed-time-ffprobe-arguments
   '("-hide_banner"
