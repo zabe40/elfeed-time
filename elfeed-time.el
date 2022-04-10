@@ -421,10 +421,9 @@ indicates the process is finished."
 
 (cl-defun elfeed-time-youtube-dl-args (&optional (program elfeed-time-youtube-dl-program))
   "Return a list of arguments to pass to `elfeed-time-youtube-dl-program'."
-  (setf program (file-name-base program))
-  (append (cdr (assoc t elfeed-time-youtube-dl-args))
-	  (cdr (assoc-string (file-name-base program)
-			     elfeed-time-youtube-dl-args))))
+  (append (alist-get t elfeed-time-youtube-dl-args)
+	  (alist-get (file-name-base program)
+		     elfeed-time-youtube-dl-args)))
 
 (defun elfeed-time-get-video-info (entry)
   "Fetch additonal metadata about ENTRY such as length, description, etc."
