@@ -629,8 +629,8 @@ and is therefore also suitable as the predicate for `sort'."
   "Reverse the order of the elfeed-search buffer."
   (interactive)
   (setf elfeed-sort-order (cl-case elfeed-sort-order
-			    ('ascending 'descending)
-			    ('descending 'ascending)))
+			    (ascending 'descending)
+			    (descending 'ascending)))
   (elfeed-search-update--force))
 
 (provide 'elfeed-time)
