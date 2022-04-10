@@ -1,0 +1,11 @@
+* Elfeed-Time
+** Introduction
+** Installation
+*** Optional dependencies
+1. =curl=
+2. =youtube-dl=, =yt-dlc=, or =yt-dlp= (preferred)
+3. =ffprobe=
+** Technical Limitations
+1. I haven't figured out a good way to determine the time of comics
+** Epistemological Limitations
+~elfeed-time~ cannot account for time spent pondering, note-taking, cross-referencing, rereading, grappling with, examining, or otherwise thinking about entries.
