@@ -409,13 +409,9 @@ indicates the process is finished."
 		      :buffer (with-current-buffer (generate-new-buffer " *elfeed-premiere-time*")
 				(setf elfeed-time--premiere-entry entry)
 				(current-buffer))
-		      :command (list shell-file-name
-				     shell-command-switch
-				     (format "%s %s"
-					     elfeed-curl-program-name
-					     (mapconcat #'identity
-							(elfeed-time-curl-args (elfeed-entry-link entry))
-							" ")))
+		      :command (cl-list* elfeed-curl-program-name
+					 (elfeed-time-curl-args
+					  (elfeed-entry-link entry)))
 		      :connection-type 'pipe
 		      :noquery nil
 		      :sentinel #'elfeed-time-premiere-sentinal)
