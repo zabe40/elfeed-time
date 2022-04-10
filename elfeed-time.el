@@ -549,7 +549,7 @@ operations, such as network requests."
 (add-hook 'elfeed-new-entry-hook #'elfeed-time-new-entry 50)
 
 (defun elfeed-time-compute-entry-time (entry)
-  "Return the length it will take to read/watch/listen to ENTRY
+  "Return the time it will take to read/watch/listen to ENTRY.
 This is called many times as a part of sorting the elfeed-search
 buffer by entry-time, and should be used only for fast
 operations."
