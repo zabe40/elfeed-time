@@ -12,9 +12,9 @@ elfeed-time can measure the length of:
   (straight-use-package '(elfeed-time :type git :host github :repo "zabe40/elfeed-time"))
 #+end_src
 *** Optional dependencies
-1. [[https://curl.se/][=curl=]]
-2. One of: [[https://github.com/yt-dlp/yt-dlp][=yt-dlp=]], [[https://github.com/ytdl-org/youtube-dl][=youtube-dl=]], or [[https://github.com/blackjack4494/yt-dlc][=yt-dlc=]]
-3. [[https://ffmpeg.org/ffprobe.html][=ffprobe=]]
+1. [[https://curl.se/][curl]]
+2. One of: [[https://github.com/yt-dlp/yt-dlp][yt-dlp]], [[https://github.com/ytdl-org/youtube-dl][youtube-dl]], or [[https://github.com/blackjack4494/yt-dlc][yt-dlc]]
+3. [[https://ffmpeg.org/ffprobe.html][ffprobe]]
 ** Configuration
 #+begin_src elisp
   (require 'elfeed-time)
