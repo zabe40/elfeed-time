@@ -1,12 +1,24 @@
-* Elfeed-Time
+* elfeed-time
 ** Introduction
+elfeed-time displays the approximate time it will take to read, watch, or listen to an elfeed entry. It can display this information in both ~elfeed-search-mode~, and ~elfeed-show-mode~.
+*** Features
+elfeed-time can measure the length of:
+ * Youtube videos
+ * Youtube premieres
+ * podcasts
+ * and of course text (including feeds that only give a preview)
 ** Installation
+#+begin_src elisp
+  (straight-use-package '(elfeed-time :type git :host github :repo "zabe40/elfeed-time"))
+#+end_src
 *** Optional dependencies
-1. =curl=
-2. =youtube-dl=, =yt-dlc=, or =yt-dlp= (preferred)
-3. =ffprobe=
+1. [[https://curl.se/][=curl=]]
+2. One of: [[https://github.com/yt-dlp/yt-dlp][=yt-dlp=]], [[https://github.com/ytdl-org/youtube-dl][=youtube-dl=]], or [[https://github.com/blackjack4494/yt-dlc][=yt-dlc=]]
+3. [[https://ffmpeg.org/ffprobe.html][=ffprobe=]]
 ** Configuration
 #+begin_src elisp
+  (require 'elfeed-time)
+
   (setf elfeed-time-reading-speed 250)
   (setf elfeed-time-ignore-private-videos t)
 
@@ -21,6 +33,7 @@
   (setf elfeed-search-print-entry-function #'elfeed-time-search-print-entry)
 #+end_src
 ** Technical Limitations
-1. I haven't figured out a good way to determine the time of comics
+ * I haven't figured out a good way to determine how long it takes to read webcomics.
+ * Newsletters pose a similar dilemma, since they can have many links, and it's impossible to know which set of links you'll follow.
 ** Epistemological Limitations
-~elfeed-time~ cannot account for time spent pondering, note-taking, cross-referencing, rereading, grappling with, examining, or otherwise thinking about entries.
+elfeed-time cannot account for time spent pondering, note-taking, cross-referencing, rereading, grappling with, examining, or otherwise thinking about entries.
