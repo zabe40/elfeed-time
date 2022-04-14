@@ -103,6 +103,10 @@ be marked as read."
 (defvar elfeed-time-ffprobe-format-cache ()
   "A list of file/url extensions supported by ffprobe.")
 
+(defface elfeed-time-display '((t :inherit (elfeed-search-unread-count-face)))
+  "Face for displaying the amount of time it takes to read,
+  watch, or listen to an entry.")
+
 (defvar elfeed-time-gc-functions nil
   "A list of functions called to determine which elfeed-refs are reachable.
 Each function must take an elfeed-entry and return a single
@@ -593,7 +597,7 @@ operations."
     (dolist (face (reverse title-faces))
       (add-face-text-property 0 (length title-column) face nil title-column))
     (insert (propertize title-column 'kbd-help title) " ")
-    (insert (propertize time 'face 'elfeed-search-unread-count-face))
+    (insert (propertize time 'face 'elfeed-time-display))
     (when feed-title
       (insert (propertize feed-title 'face 'elfeed-search-feed-face) " "))
     (when tags
