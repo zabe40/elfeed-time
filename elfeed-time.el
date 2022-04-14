@@ -219,12 +219,6 @@ Adapted from `elfeed-curl--args'"
 	    (elfeed-untag entry 'preview))
 	(kill-buffer)))))
 
-(defun elfeed-time-serialize-dom-attributes (attributes)
-  "Return a string with ATTRIBUTES encoded as HTML node attributes."
-  (mapconcat (lambda (attribute-pair)
-	       (format " %s=\"%s\"" (car attribute-pair) (cdr attribute-pair)))
-	     attributes ""))
-
 (defun elfeed-time-serialize-dom (dom)
   "Serialize an HTML or XML DOM into a string."
   (let ((dom-depth (or (bound-and-true-p dom-depth) 0)))
@@ -234,9 +228,13 @@ Adapted from `elfeed-curl--args'"
 	       (attributes (dom-attributes dom))
 	       (children (dom-children dom))
 	       (dom-depth (1+ dom-depth)))
-	   (format "<%s%s>\n%s</%s>"
+	   (format "<%s %s>\n%s</%s>"
 		   tag
-		   (elfeed-time-serialize-dom-attributes attributes)
+		   (mapconcat (lambda (attribute-pair)
+				(format "%s=\"%s\""
+					(car attribute-pair)
+					(cdr attribute-pair)))
+			      attributes " ")
 		   (mapconcat (lambda (child)
 				(concat (make-string dom-depth ?\s)
 					(elfeed-time-serialize-dom child)))
