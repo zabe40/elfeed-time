@@ -158,10 +158,10 @@ If STATS is true, return the space cleared in bytes."
 Return a list of entries when MULTIPLE-ENTRIES-P is non-nil,
 otherwise, return the primary selected entry."
   (cl-case major-mode
-    ((elfeed-search-mode) (elfeed-search-selected (not multiple-entries-p)))
-    ((elfeed-show-mode) (if multiple-entries-p
-			    (list elfeed-show-entry)
-			  elfeed-show-entry))
+    (elfeed-search-mode (elfeed-search-selected (not multiple-entries-p)))
+    (elfeed-show-mode (if multiple-entries-p
+			  (list elfeed-show-entry)
+			elfeed-show-entry))
     (t (user-error "Can't get current entries. Not in an elfeed mode"))))
 
 (defun elfeed-time-format-seconds (string seconds)
