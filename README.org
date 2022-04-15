@@ -1,6 +1,8 @@
 * elfeed-time
+CAUTION: This package is still under development, breaking changes are very possible.
 ** Introduction
 elfeed-time displays the approximate time it will take to read, watch, or listen to an elfeed entry. It can display this information in both ~elfeed-search-mode~, and ~elfeed-show-mode~.
+#+html: <img src="https://i.imgur.com/MsSnK61.png">
 *** Features
 elfeed-time can measure the length of:
  * Youtube videos
