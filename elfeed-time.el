@@ -146,8 +146,6 @@ If STATS is true, return the space cleared in bytes."
 			      when (elfeed-directory-empty-p dir)
 			      do (delete-directory dir)))))
 
-;(advice-add 'elfeed-db-gc :override #'elfeed-time-db-gc-trace-meta)
-
 (defun elfeed-time-entry-meta-content (entry)
   "Return the elfeed-ref in ENTRY's content meta slot."
   (elfeed-meta entry :et-content))
