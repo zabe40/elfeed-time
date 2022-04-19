@@ -397,8 +397,8 @@ indicates the process is finished."
   (interactive (list (elfeed-time-current-entries nil)))
   (when (string-match-p "youtube\\.com" (elfeed-entry-link entry))
     (if elfeed-time-use-curl
-	(make-process :name "elfeed-get-premiere-time"
-		      :buffer (with-current-buffer (generate-new-buffer " *elfeed-premiere-time*")
+	(make-process :name "elfeed-time-get-premiere-time"
+		      :buffer (with-current-buffer (generate-new-buffer " *elfeed-time-premiere-time*")
 				(setf elfeed-time--premiere-entry entry)
 				(current-buffer))
 		      :command (cl-list* elfeed-curl-program-name
@@ -423,8 +423,8 @@ indicates the process is finished."
   (interactive (list (elfeed-time-current-entries nil)))
   (when (string-match-p "youtube\\.com" (elfeed-entry-link entry))
     (message "Getting info for: %s" (elfeed-entry-link entry))
-    (make-process :name "elfeed-get-video-length"
-		  :buffer (with-current-buffer (generate-new-buffer " *elfeed-video-length*")
+    (make-process :name "elfeed-time-get-video-length"
+		  :buffer (with-current-buffer (generate-new-buffer " *elfeed-time-video-length*")
 			    (setf elfeed-time--get-video-info-entry entry)
 			    (current-buffer))
 		  :command (cl-list* elfeed-time-youtube-dl-program
