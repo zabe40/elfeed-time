@@ -214,12 +214,10 @@ Adapted from `elfeed-curl--args'"
 	       nil buffer nil)
 	      buffer)
 	  (url-retrieve-synchronously (elfeed-entry-link entry) nil nil 30))
-      (unwind-protect
-	  (progn
-	    (setf (elfeed-meta entry :et-content) (elfeed-ref (buffer-string))
-		  (elfeed-meta entry :et-content-type) 'html)
-	    (elfeed-untag entry 'preview))
-	(kill-buffer)))))
+      (setf (elfeed-meta entry :et-content) (elfeed-ref (buffer-string))
+	    (elfeed-meta entry :et-content-type) 'html)
+      (elfeed-untag entry 'preview)
+      (kill-buffer))))
 
 (defun elfeed-time-serialize-dom (dom)
   "Serialize an HTML or XML DOM into a string."
@@ -384,17 +382,15 @@ to determine when it will go live."
   "Kill the buffer associated with PROCESS when EVENT-STRING
 indicates the process is finished."
   (with-current-buffer (process-buffer process)
-    (unwind-protect
-	(when (string-match-p (rx "finished") event-string)
-	  (elfeed-time-premiere-parse elfeed-time--premiere-entry (buffer-string)))
-      (unless (process-live-p process)
-	(kill-buffer)))))
+    (when (string-match-p (rx "finished") event-string)
+      (elfeed-time-premiere-parse elfeed-time--premiere-entry (buffer-string)))
+    (unless (process-live-p process)
+      (kill-buffer))))
 
 (cl-defun elfeed-time-premiere-callback (&rest rest &aux (entry (plist-get (cdr rest) :entry)))
   "Kill the buffer associated with this callback after parsing it."
-  (unwind-protect
-      (elfeed-time-premiere-parse entry (buffer-string))
-    (kill-buffer (current-buffer))))
+  (elfeed-time-premiere-parse entry (buffer-string))
+  (kill-buffer (current-buffer)))
 
 (defun elfeed-time-get-youtube-premiere-info (entry)
   "Fetch the time when ENTRY will go live as a Youtube Premiere."
@@ -439,40 +435,39 @@ indicates the process is finished."
 		  (lambda (process event-string)
 		    (message "%s" event-string)
 		    (with-current-buffer (process-buffer process)
-		      (unwind-protect
-			  (let ((entry elfeed-time--get-video-info-entry))
-			    (progn
-			      (when (string-match-p "exited abnormally" event-string)
-				(cond
-				 ((string-match-p (rx "ERROR: This live event will begin in a few moments.")
-						  (buffer-string))
-				  (setf (elfeed-meta entry :et-premiere-time) (time-convert nil 'integer)))
-				 ((and (string-match-p (rx line-start "ERROR: ")
-						       (buffer-string))
-				       (string-match-p (rx (or "Premieres in" "This live event"))
-						       (buffer-string)))
-				  (elfeed-time-get-youtube-premiere-info entry))
-				 ((string-match-p "ERROR: Private video" (buffer-string))
-				  (when (elfeed-meta entry :et-premiere-time)
-				    (setf (elfeed-meta entry :et-premiere-time) nil))
-				  (when (or (and (functionp elfeed-time-ignore-private-videos)
-						 (funcall elfeed-time-ignore-private-videos entry))
-					    elfeed-time-ignore-private-videos)
-				    (elfeed-untag entry 'unread))
-				  (message "%s is a private video" (elfeed-entry-link entry)))))
-			      (when (string-match-p "finished" event-string)
-				(let ((video-data (progn (goto-char (point-min))
-							 (json-parse-buffer))))
-				  (setf (elfeed-meta entry :et-length-in-seconds) (gethash "duration" video-data)
-					(elfeed-meta entry :et-content) (elfeed-ref (gethash "description" video-data)))
-				  (with-current-buffer (elfeed-search-buffer)
-				    (elfeed-search-update-entry entry))
-				  (when-let ((buffer-name (get-buffer (elfeed-show--buffer-name entry))))
-				    (with-current-buffer buffer-name
-				      (when (equal elfeed-show-entry entry)
-					(elfeed-show-refresh))))))))
-			(unless (process-live-p process)
-			  (kill-buffer (process-buffer process)))))))))
+		      (let ((entry elfeed-time--get-video-info-entry))
+			(progn
+			  (when (string-match-p "exited abnormally" event-string)
+			    (cond
+			     ((string-match-p (rx "ERROR: This live event will begin in a few moments.")
+					      (buffer-string))
+			      (setf (elfeed-meta entry :et-premiere-time) (time-convert nil 'integer)))
+			     ((and (string-match-p (rx line-start "ERROR: ")
+						   (buffer-string))
+				   (string-match-p (rx (or "Premieres in" "This live event"))
+						   (buffer-string)))
+			      (elfeed-time-get-youtube-premiere-info entry))
+			     ((string-match-p "ERROR: Private video" (buffer-string))
+			      (when (elfeed-meta entry :et-premiere-time)
+				(setf (elfeed-meta entry :et-premiere-time) nil))
+			      (when (or (and (functionp elfeed-time-ignore-private-videos)
+					     (funcall elfeed-time-ignore-private-videos entry))
+					elfeed-time-ignore-private-videos)
+				(elfeed-untag entry 'unread))
+			      (message "%s is a private video" (elfeed-entry-link entry)))))
+			  (when (string-match-p "finished" event-string)
+			    (let ((video-data (progn (goto-char (point-min))
+						     (json-parse-buffer))))
+			      (setf (elfeed-meta entry :et-length-in-seconds) (gethash "duration" video-data)
+				    (elfeed-meta entry :et-content) (elfeed-ref (gethash "description" video-data)))
+			      (with-current-buffer (elfeed-search-buffer)
+				(elfeed-search-update-entry entry))
+			      (when-let ((buffer-name (get-buffer (elfeed-show--buffer-name entry))))
+				(with-current-buffer buffer-name
+				  (when (equal elfeed-show-entry entry)
+				    (elfeed-show-refresh))))))))
+		      (unless (process-live-p process)
+			(kill-buffer (process-buffer process))))))))
 
 (defun elfeed-time-count-entry-words (entry)
   "Add the word count of ENTRY to the entry's metadata.
