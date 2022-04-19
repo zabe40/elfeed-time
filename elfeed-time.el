@@ -415,7 +415,8 @@ indicates the process is finished."
   "Return a list of arguments to pass to `elfeed-time-youtube-dl-program'."
   (append (alist-get t elfeed-time-youtube-dl-args)
 	  (alist-get (file-name-base program)
-		     elfeed-time-youtube-dl-args)))
+		     elfeed-time-youtube-dl-args
+		     nil nil #'equal)))
 
 (defun elfeed-time-get-video-info (entry)
   "Fetch additonal metadata about ENTRY such as length, description, etc."
