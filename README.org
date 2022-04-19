@@ -26,6 +26,10 @@ elfeed-time can measure the length of:
   (setf elfeed-time-reading-speed 250)
   (setf elfeed-time-ignore-private-videos t)
 
+  (add-hook 'elfeed-new-entry-hook
+	    (elfeed-make-tagger :feed-url (rx "youtube.com")
+				:add '(video)))
+
   (add-hook 'elfeed-new-entry-hook #'elfeed-time-fetch-full-content 25)
   (add-hook 'elfeed-new-entry-hook #'elfeed-time-extract-readable-content 30)
   (add-hook 'elfeed-new-entry-hook #'elfeed-time-new-entry 50)
