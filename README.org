@@ -43,5 +43,6 @@ elfeed-time can measure the length of:
 ** Technical Limitations
  * I haven't figured out a good way to determine how long it takes to read webcomics. Perhaps sort them into webcomics that publish chapters VS pages at a time?
  * Newsletters pose a similar problem, since they can have many links, and it's impossible to know which set of links you'll follow.
+ * yt-dlp currently doesn't have a way to access the localized title of a video, see [[https://github.com/yt-dlp/yt-dlp/issues/387][this issue]].
 ** Epistemological Limitations
 elfeed-time cannot account for time spent pondering, note-taking, cross-referencing, rereading, grappling with, examining, or otherwise thinking about entries.
