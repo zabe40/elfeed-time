@@ -610,7 +610,7 @@ and is therefore also suitable as the predicate for `sort'."
      (elfeed-time-compute-entry-time entry-2)))
 
 
-(defun elfeed-time-set-sort-function (function)
+(defun elfeed-time--set-sort-function (function)
   "Sort the elfeed-search buffer according to FUNCTION immediately."
   (setf elfeed-search-sort-function function)
   (elfeed-search-update--force))
@@ -618,12 +618,12 @@ and is therefore also suitable as the predicate for `sort'."
 (defun elfeed-time-sort-by-date ()
   "Sort the elfeed-search buffer by date."
   (interactive)
-  (elfeed-time-set-sort-function nil))
+  (elfeed-time--set-sort-function nil))
 
 (defun elfeed-time-sort-by-time ()
   "Sort the elfeed-search buffer by time to read entry."
   (interactive)
-  (elfeed-time-set-sort-function #'elfeed-time-compare-entries))
+  (elfeed-time--set-sort-function #'elfeed-time-compare-entries))
 
 (defun elfeed-time-toggle-sort-order ()
   "Reverse the order of the elfeed-search buffer."
