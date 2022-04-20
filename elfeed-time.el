@@ -380,7 +380,7 @@ to determine when it will go live."
     (with-current-buffer (elfeed-search-buffer)
       (elfeed-search-update-entry entry))))
 
-(defun elfeed-time-premiere-sentinal (process event-string)
+(defun elfeed-time-premiere-sentinel (process event-string)
   "Kill the buffer associated with PROCESS when EVENT-STRING
 indicates the process is finished."
   (with-current-buffer (process-buffer process)
@@ -408,7 +408,7 @@ indicates the process is finished."
 					  (elfeed-entry-link entry)))
 		      :connection-type 'pipe
 		      :noquery nil
-		      :sentinel #'elfeed-time-premiere-sentinal)
+		      :sentinel #'elfeed-time-premiere-sentinel)
       (url-retrieve (elfeed-entry-link entry)
 		    #'elfeed-time-premiere-callback
 		    (list :entry entry)))))
