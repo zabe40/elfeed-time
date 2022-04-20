@@ -4,7 +4,9 @@
 
 ;; Author: zabe <zabe@disroot.org>
 ;; URL: https://github.com/zabe40/elfeed-time
-;; Package-Requires: ((emacs "27.1"))
+;; Version: 0.1
+;; Package-Requires: ((emacs "27.1") (elfeed "3.4.2"))
+;; Keywords: comm
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
