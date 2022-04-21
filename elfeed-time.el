@@ -46,6 +46,12 @@ For information on possible specifiers, see `format-seconds'."
   :group 'elfeed-time
   :type 'string)
 
+(defcustom elfeed-time-premiere-date-format-string "%Y-%m-%d at %X"
+  "The format control string for displaying the date and time of premieres.
+For information on possible specifiers, see `format-time-string'."
+  :group 'elfeed-time
+  :type 'string)
+
 (defcustom elfeed-time-use-curl elfeed-use-curl
   "If non-nil, fetch full content using curl instead of `url-retrieve'."
   :group 'elfeed-time
@@ -609,6 +615,19 @@ and is therefore also suitable as the predicate for `sort'."
   (< (elfeed-time-compute-entry-time entry-1)
      (elfeed-time-compute-entry-time entry-2)))
 
+(defun elfeed-time-premiere-date (entry)
+  "Print the date of the start of ENTRY to the minibuffer.
+ENTRY must represent a premiere."
+  (interactive (list (elfeed-time-current-entries nil)))
+  (let ((title (or (elfeed-meta entry :title)
+		   (elfeed-entry-title entry)
+		   "")))
+    (if-let ((time (elfeed-meta entry :et-premiere-time)))
+	(message "%s premieres on %s"
+		 title
+		 (format-time-string elfeed-time-premiere-date-format-string
+				     time))
+      (user-error "%s is not a premiere" (elfeed-entry-title entry)))))
 
 (defun elfeed-time--set-sort-function (function)
   "Sort the elfeed-search buffer according to FUNCTION immediately."
