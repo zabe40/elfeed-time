@@ -565,7 +565,7 @@ operations."
       0))
 
 ;; TODO account for cjk chars
-;; see "min-width" display specification in emacs 28
+;; see "min-width" display specification in emacs 29
 ;; https://lars.ingebrigtsen.no/2021/11/24/the-most-controversial-change-in-emacs-history/
 (defun elfeed-time-search-print-entry (entry)
   "Print ENTRY to the `elfeed-search-mode' buffer.
