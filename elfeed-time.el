@@ -213,7 +213,7 @@ Adapted from `elfeed-curl--args'"
 	    (called-interactively-p 'any))
     (with-current-buffer
 	(if elfeed-time-use-curl
-	    (let ((buffer (generate-new-buffer " *curl-full-content*")))
+	    (let ((buffer (generate-new-buffer " *elfeed-time-full-content*")))
 	      (call-process-shell-command
 	       (concat elfeed-curl-program-name " "
 		       (mapconcat #'identity (elfeed-time-curl-args (elfeed-entry-link entry)
