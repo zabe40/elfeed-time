@@ -47,8 +47,9 @@ For information on possible specifiers, see `format-seconds'."
   :type 'string)
 
 (defcustom elfeed-time-premiere-date-format-string "%Y-%m-%d at %X"
-  "The format control string for displaying the date and time of premieres.
-For information on possible specifiers, see `format-time-string'."
+  "The format control string to display the date and time of premieres.
+For information on possible specifiers, see
+`format-time-string'."
   :group 'elfeed-time
   :type 'string)
 
@@ -104,7 +105,8 @@ be marked as read."
     "-loglevel error"
     "-print_format default=noprint_wrappers=1:nokey=1"
     "-show_entries format=duration")
-  "A list of arguments to pass to ffprobe to get the duration of a media file in seconds."
+  "A list of arguments to pass to ffprobe to get the duration of
+a media file in seconds."
   :group 'elfeed-time
   :type '(repeat string))
 
@@ -187,7 +189,8 @@ Use MAX-SECONDS as the largest time to expect."
 URL must be one string.
 
 Adapted from `elfeed-curl--args'"
-  (cl-assert (stringp url) t (format "URL must be a single string, instead of %S" url))
+  (cl-assert (stringp url) t (format "URL must be a single string, instead of %S"
+				     url))
   (let ((args ())
         (capabilities (elfeed-curl-get-capabilities)))
     (push "--disable" args)
@@ -216,8 +219,10 @@ Adapted from `elfeed-curl--args'"
 	    (let ((buffer (generate-new-buffer " *elfeed-time-full-content*")))
 	      (call-process-shell-command
 	       (concat elfeed-curl-program-name " "
-		       (mapconcat #'identity (elfeed-time-curl-args (elfeed-entry-link entry)
-								       `(("User-Agent" . ,elfeed-user-agent)))
+		       (mapconcat #'identity
+				  (elfeed-time-curl-args
+				   (elfeed-entry-link entry)
+				   `(("User-Agent" . ,elfeed-user-agent)))
 				  " "))
 	       nil buffer nil)
 	      buffer)
@@ -268,7 +273,7 @@ Adapted from `eww-readable'"
 				       (eww-highest-readability dom))))))
 
 (defun elfeed-time-extract-readable-content (entry)
-  "Set :et-content meta of ENTRY to a cleaned-up version of the same HTML (if applicable)"
+  "Set :et-content of ENTRY to a cleaned-up version of the original HTML."
   (interactive (list (elfeed-time-current-entries nil)))
   (when (or (member 'unreadable  (elfeed-entry-tags entry))
 	    (called-interactively-p 'any))
@@ -284,8 +289,11 @@ Adapted from `eww-readable'"
 	       (base (elfeed-compute-base (elfeed-feed-url feed))))
 	  (with-temp-buffer
 	    (insert (elfeed-deref content))
-	    (setf (buffer-string) (elfeed-time-make-html-readable (buffer-string) (and feed base)))
-	    (setf (elfeed-meta entry :et-content) (elfeed-ref (buffer-string)))
+	    (setf (buffer-string)
+		  (elfeed-time-make-html-readable (buffer-string)
+						  (and feed base)))
+	    (setf (elfeed-meta entry :et-content)
+		  (elfeed-ref (buffer-string)))
 	    (elfeed-untag entry 'unreadable)))))))
 
 (defun elfeed-time-preprocess-content-readable (content content-type base)
@@ -294,9 +302,9 @@ Adapted from `eww-readable'"
     content))
 
 (defun elfeed-time-generate-refresh-mail-style-function ()
-  "Return a function to update the buffer to match the selected entry, using a mail-style.
-When `elfeed-time-preprocess-function' is non-nil, call it on
-the entry's content before displaying it.
+  "Return a function to update the buffer, using a mail-style.
+When `elfeed-time-preprocess-function' is non-nil, call it on the
+entry's content before displaying it.
 
 Adapted from `elfeed-show-refresh--mail-style'"
   (lambda ()
@@ -391,7 +399,8 @@ to determine when it will go live."
 indicates the process is finished."
   (with-current-buffer (process-buffer process)
     (when (string-match-p (rx "finished") event-string)
-      (elfeed-time-premiere-parse elfeed-time--premiere-entry (buffer-string)))
+      (elfeed-time-premiere-parse elfeed-time--premiere-entry
+				  (buffer-string)))
     (unless (process-live-p process)
       (kill-buffer))))
 
