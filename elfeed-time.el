@@ -124,9 +124,9 @@ This could include headers, footers, advertisements, etc."
   :group 'elfeed-time
   :type 'string)
 
-(defcustom elfeed-time-youtube-dl-args '(("yt-dlp" . ("--print" "%()j"))
-					 ("yt-dlc" . ("--dump-json"))
-					 ("youtube-dl" . ("--dump-json"))
+(defcustom elfeed-time-youtube-dl-args '(("yt-dlp" . ("--print" "%()j" "--no-colors"))
+					 ("yt-dlc" . ("--dump-json" "--no-color"))
+					 ("youtube-dl" . ("--dump-json" "--no-color"))
 					 (t . ("-q")))
   "An alist of associating program names to lists of arguments to pass to them.
 The entry with key t is a list of arguments for all programs."
