@@ -248,7 +248,7 @@ Adapted from `elfeed-curl--args'"
       (push "--compressed" args))
     (push "--silent" args)
     (push "--location" args)
-    (push (format "-m%s" 5) args)
+    (push (format "-m%s" elfeed-curl-timeout) args)
     (push "-D-" args)
     (dolist (header headers)
       (cl-destructuring-bind (key . value) header
