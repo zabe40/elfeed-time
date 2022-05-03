@@ -18,27 +18,45 @@ elfeed-time can measure the length of:
 2. One of: [[https://github.com/yt-dlp/yt-dlp][yt-dlp]], [[https://github.com/ytdl-org/youtube-dl][youtube-dl]], or [[https://github.com/blackjack4494/yt-dlc][yt-dlc]]
 3. [[https://ffmpeg.org/ffprobe.html][ffprobe]]
 ** Configuration
+*** Strongly Recommended
 #+begin_src elisp
   (require 'elfeed-time)
 
   (advice-add 'elfeed-db-gc :override #'elfeed-time-db-gc-trace-meta)
-
-  (setf elfeed-time-reading-speed 250)
-  (setf elfeed-time-ignore-private-videos t)
-
+#+end_src
+*** Recommended
+#+begin_src elisp
+  (setf elfeed-show-refresh-function (elfeed-time-generate-refresh-mail-style-function))
+  (setf elfeed-search-print-entry-function #'elfeed-time-search-print-entry)
+  (add-hook elfeed-new-entry-hook #'elfeed-time-new-entry 80)
+#+end_src
+*** Add what you need
+For example, if you don't subscribe to any podcasts with elfeed, you won't need to add ~elfeed-time-maybe-get-podcast-info~ to ~elfeed-time-new-entry-functions~.
+#+begin_src elisp
+  ;; Recommended depending on your needs
   (add-hook 'elfeed-new-entry-hook
 	    (elfeed-make-tagger :feed-url (rx "youtube.com")
 				:add '(video)))
 
-  (add-hook 'elfeed-new-entry-hook #'elfeed-time-fetch-full-content 25)
-  (add-hook 'elfeed-new-entry-hook #'elfeed-time-extract-readable-content 30)
-  (add-hook 'elfeed-new-entry-hook #'elfeed-time-new-entry 50)
+  (add-hook elfeed-time-new-entry-functions #'elfeed-time-maybe-get-video-info 10)
+  (add-hook elfeed-time-new-entry-functions #'elfeed-time-maybe-get-premiere-info 20)
+  (add-hook elfeed-time-new-entry-functions #'elfeed-time-maybe-get-podcast-info 30)
+  (add-hook elfeed-time-new-entry-functions #'elfeed-time-maybe-get-full-content 40)
+  (add-hook elfeed-time-new-entry-functions #'elfeed-time-maybe-make-entry-readable 50)
+  (add-hook elfeed-time-new-entry-functions #'elfeed-time-count-entry-words 60)
+
+  (add-hook elfeed-time-entry-time-functions #'elfeed-time-video-time 10)
+  (add-hook elfeed-time-entry-time-functions #'elfeed-time-premiere-time 20)
+  (add-hook elfeed-time-entry-time-functions #'elfeed-time-podcast-time 30)
+  (add-hook elfeed-time-entry-time-functions #'elfeed-time-text-time 40)
+#+end_src
+*** Preferences
+#+begin_src elisp
+  (setf elfeed-time-reading-speed 250)
+  (setf elfeed-time-ignore-private-videos t)
 
   (setf elfeed-search-sort-function #'elfeed-time-compare-entries)
   (setf elfeed-sort-order 'ascending)
-
-  (setf elfeed-show-refresh-function (elfeed-time-generate-refresh-mail-style-function))
-  (setf elfeed-search-print-entry-function #'elfeed-time-search-print-entry)
 #+end_src
 ** Technical Limitations
  * I haven't figured out a good way to determine how long it takes to read webcomics. Perhaps sort them into webcomics that publish chapters VS pages at a time?
