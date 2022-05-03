@@ -709,12 +709,13 @@ operations."
                     (lambda (s) (propertize s 'face 'elfeed-search-tag-face))
                     tags ","))
          (title-width (- (window-width) 10 elfeed-search-trailing-width))
-         (title-column (elfeed-format-column
-                        title (elfeed-clamp
-			       elfeed-search-title-min-width
-			       title-width
-			       elfeed-search-title-max-width)
-                        :left))
+         (title-column (bidi-string-mark-left-to-right
+			(elfeed-format-column
+                         title (elfeed-clamp
+				elfeed-search-title-min-width
+				title-width
+				elfeed-search-title-max-width)
+                         :left)))
 	 (time (elfeed-format-column (elfeed-time-format-seconds (concat elfeed-time-format-string " ")
 								 (elfeed-time-compute-entry-time entry))
 				     (1+ (elfeed-time-format-seconds-max-length elfeed-time-format-string
