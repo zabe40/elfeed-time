@@ -741,7 +741,9 @@ and is therefore also suitable as the predicate for `sort'."
   (< (elfeed-time-compute-entry-time entry-1)
      (elfeed-time-compute-entry-time entry-2)))
 
-(defun elfeed-time-premiere-date (entry)
+;;; Convenience functions
+
+(defun elfeed-time-print-premiere-date (entry)
   "Print the date of the start of ENTRY to the minibuffer.
 ENTRY must represent a premiere."
   (interactive (list (elfeed-time-current-entries nil)))
@@ -753,7 +755,7 @@ ENTRY must represent a premiere."
 		 title
 		 (format-time-string elfeed-time-premiere-date-format-string
 				     time))
-      (user-error "%s is not a premiere" (elfeed-entry-title entry)))))
+      (user-error "%s is not a premiere" title))))
 
 (defun elfeed-time--set-sort-function (function)
   "Sort the elfeed-search buffer according to FUNCTION immediately."
