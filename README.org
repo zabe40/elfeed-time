@@ -26,7 +26,7 @@ elfeed-time can measure the length of:
 #+end_src
 *** Recommended
 #+begin_src elisp
-  (setf elfeed-show-refresh-function (elfeed-time-generate-refresh-mail-style-function))
+  (setf elfeed-show-refresh-function elfeed-time-refresh-mail-style-function)
   (setf elfeed-search-print-entry-function #'elfeed-time-search-print-entry)
   (add-hook elfeed-new-entry-hook #'elfeed-time-new-entry 80)
 #+end_src
