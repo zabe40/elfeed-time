@@ -59,35 +59,6 @@ For information on possible specifiers, see
   :group 'elfeed-time
   :type 'boolean)
 
-(defvar elfeed-time-new-entry-functions nil
-  "A list of functions to run asynchronously on new entries.
-The functions in this hook are called with two arguments, an
-ENTRY, and a CONTINUATION.
-
-CONTINUATION is a list of functions. Functions in this hook
-should arrange to call the first function in the list with ENTRY,
-and the rest of CONTINUATION as the two arguments. Functions
-should not call CONTINUATION if they encounter an error.
-Functions in this hook will not be called with a value of nil for
-CONTINUATION (but may want to handle that case anyways).
-
-This hook is intended as a place to put computations that might
-take a long time, including network requests, etc.")
-
-(defvar elfeed-time-entry-time-functions nil
-  "A list of functions to call to compute an entry's time.
-Functions are called in order with one argument, ENTRY, the
-elfeed-entry they should compute the time of. Each function
-should return an integer representing the time in seconds it
-takes to read ENTRY, or nil if ENTRY is not of an applicable
-type. A function can return a negative number of seconds to
-indicate that ENTRY respresents an event in the future.
-
-This hook is intended to be called within
-`elfeed-search-sort-function' (which runs every keystroke in live
-search), so functions in this hook should complete quickly,
-especially if returning nil.")
-
 (defcustom elfeed-time-preview-tag 'preview
   "A tag for entries with only a preview of the desired content."
   :group 'elfeed-time
@@ -113,9 +84,6 @@ This could include headers, footers, advertisements, etc."
   "A tag for entries that are premieres."
   :group 'elfeed-time
   :type 'symbol)
-
-(defvar-local elfeed-time-preprocess-function nil
-  "A function called to transform an entry's content before it is displayed.")
 
 (defcustom elfeed-time-youtube-dl-program (or (executable-find "yt-dlp")
 					      (executable-find "yt-dlc")
@@ -160,12 +128,44 @@ a media file in seconds."
   :group 'elfeed-time
   :type '(repeat string))
 
-(defvar elfeed-time-ffprobe-format-cache ()
-  "A list of file/url extensions supported by ffprobe.")
-
 (defface elfeed-time-display '((t :inherit (elfeed-search-unread-count-face)))
   "Face for displaying the amount of time it takes to read,
   watch, or listen to an entry.")
+
+(defvar elfeed-time-new-entry-functions nil
+  "A list of functions to run asynchronously on new entries.
+The functions in this hook are called with two arguments, an
+ENTRY, and a CONTINUATION.
+
+CONTINUATION is a list of functions. Functions in this hook
+should arrange to call the first function in the list with ENTRY,
+and the rest of CONTINUATION as the two arguments. Functions
+should not call CONTINUATION if they encounter an error.
+Functions in this hook will not be called with a value of nil for
+CONTINUATION (but may want to handle that case anyways).
+
+This hook is intended as a place to put computations that might
+take a long time, including network requests, etc.")
+
+(defvar elfeed-time-entry-time-functions nil
+  "A list of functions to call to compute an entry's time.
+Functions are called in order with one argument, ENTRY, the
+elfeed-entry they should compute the time of. Each function
+should return an integer representing the time in seconds it
+takes to read ENTRY, or nil if ENTRY is not of an applicable
+type. A function can return a negative number of seconds to
+indicate that ENTRY respresents an event in the future.
+
+This hook is intended to be called within
+`elfeed-search-sort-function' (which runs every keystroke in live
+search), so functions in this hook should complete quickly,
+especially if returning nil.")
+
+(defvar-local elfeed-time-preprocess-function nil
+  "A function called to transform an entry's content before it is displayed.")
+
+(defvar elfeed-time-ffprobe-format-cache ()
+  "A list of file/url extensions supported by ffprobe.")
 
 (defvar elfeed-time-gc-functions nil
   "A list of functions called to determine which elfeed-refs are reachable.
@@ -222,18 +222,6 @@ otherwise, return the primary selected entry."
 			elfeed-show-entry))
     (t (user-error "Can't get current entries. Not in an elfeed mode"))))
 
-(defun elfeed-time-format-seconds (string seconds)
-  "Use format control STRING to format the number SECONDS.
-When SECONDS is negative, take its absolute value and prepend a
-negative sign. All format specifiers are as in `format-seconds'."
-  (concat (if (< seconds 0) "-" "")
-	  (format-seconds string (abs seconds))))
-
-(defun elfeed-time-format-seconds-max-length (format-string max-seconds)
-  "Return the maximum length in characters that FORMAT-STRING can be.
-Use MAX-SECONDS as the largest time to expect."
-  (1+ (length (elfeed-time-format-seconds format-string (abs max-seconds)))))
-
 (defun elfeed-time-log (level entry format &rest objects)
   "Write log message FORMAT at LEVEL about ENTRY to elfeed's log buffer.
 FORMAT must be a string suitable for `format' given OBJECTS as arguments."
@@ -274,6 +262,175 @@ CONTINUATION as arguments."
 			    error type data))))
       (unless error-p
 	(funcall fun entry (current-buffer) continuation)))))
+
+(cl-defun elfeed-time-youtube-dl-args (&optional (program elfeed-time-youtube-dl-program))
+  "Return a list of arguments to pass to `elfeed-time-youtube-dl-program'."
+  (append (alist-get t elfeed-time-youtube-dl-args)
+	  (alist-get (file-name-base program)
+		     elfeed-time-youtube-dl-args
+		     nil nil #'equal)))
+
+(defun elfeed-time-maybe-get-video-info (entry continuation)
+  "Get ENTRY's length as a video if it is one.
+Call CONTINUATION when finished."
+  (if (member elfeed-time-video-tag (elfeed-entry-tags entry))
+      (elfeed-time-get-video-info entry continuation)
+    (funcall (car continuation) entry (cdr continuation))))
+
+(defun elfeed-time-get-video-info (entry &optional continuation)
+  "Fetch additonal metadata about ENTRY such as length, description, etc.
+Call CONTINUATION when finished."
+  (interactive (list (elfeed-time-current-entries nil)))
+  (setf continuation (or continuation (list #'ignore)))
+  (make-process :name "elfeed-time-get-video-length"
+		:buffer (generate-new-buffer
+			 (format " *elfeed-time-video-length: %s*"
+				 (elfeed-entry-link entry)))
+		:command (cl-list* elfeed-time-youtube-dl-program
+				   (elfeed-entry-link entry)
+				   (elfeed-time-youtube-dl-args))
+		:noquery t
+		:sentinel
+		(lambda (process event-string)
+		  (catch 'unknown-error
+		    (with-current-buffer (process-buffer process)
+		      (pcase event-string
+			((rx "exited abnormally")
+			 (goto-char (point-min))
+			 (cond ((re-search-forward (rx bol "ERROR: This live event will begin in a few moments.")
+						   nil t)
+				(setf (elfeed-meta entry :et-premiere-time)
+				      (time-convert nil 'integer)))
+			       ((re-search-forward (rx bol "ERROR: " (* anychar)
+						       (or "Premieres in" "This live event"))
+						   nil t)
+				(elfeed-tag entry elfeed-time-premiere-tag))
+			       ((re-search-forward (rx bol "ERROR: Private video") nil t)
+				(when (elfeed-meta entry :et-premiere-time)
+				  (setf (elfeed-meta entry :et-premiere-time) nil))
+				(when (or (and (functionp elfeed-time-ignore-private-videos)
+					       (funcall elfeed-time-ignore-private-videos entry))
+					  elfeed-time-ignore-private-videos)
+				  (elfeed-untag entry 'unread))
+				(elfeed-time-log 'warn entry "is a private video"))
+			       ((re-search-forward (rx bol "ERROR: " (* anychar)
+						       "Sign in to confirm your age")
+						   nil t)
+				(elfeed-time-log 'warn entry "is agegated"))
+			       (t
+				(elfeed-time-log 'error entry "Unknown error: %S"
+						 (buffer-string))
+				(throw 'unknown-error nil))))
+			((rx "finished")
+			 (goto-char (point-min))
+			 (while (re-search-forward (rx bol "WARNING: " (group (+ not-newline)) eol) nil t)
+			   (elfeed-time-log 'warn entry "%s" (match-string 1)))
+			 (let ((video-data (json-parse-buffer)))
+			   (setf (elfeed-meta entry :et-length-in-seconds) (gethash "duration" video-data)
+				 (elfeed-meta entry :et-content) (elfeed-ref (gethash "description" video-data)))
+			   (with-current-buffer (elfeed-search-buffer)
+			     (elfeed-search-update-entry entry))
+			   (when-let ((buffer-name (get-buffer (elfeed-show--buffer-name entry))))
+			     (with-current-buffer buffer-name
+			       (when (equal elfeed-show-entry entry)
+				 (elfeed-show-refresh))))))
+			(_ (throw 'unknown-error nil)))
+		      (kill-buffer (process-buffer process))
+		      (funcall (car continuation) entry (cdr continuation)))))))
+
+(defun elfeed-time-premiere-parse (entry buffer continuation)
+  "Parse the HTML in BUFFER to determine when ENTRY goes live.
+Call CONTINUATION when finished."
+  (with-current-buffer buffer
+    (elfeed-time--delete-http-header)
+    (goto-char (point-min))
+    (when (re-search-forward (rx "\"startTimestamp\":\""
+				 (group (1+ (not "\""))) "\"")
+			     nil t)
+      (setf (elfeed-meta entry :et-premiere-time)
+	    (time-convert (encode-time (iso8601-parse
+					(match-string 1)))
+			  'integer))
+      (with-current-buffer (elfeed-search-buffer)
+	(elfeed-search-update-entry entry)))
+    (kill-buffer buffer))
+  (funcall (car continuation) entry (cdr continuation)))
+
+(defun elfeed-time-maybe-get-premiere-info (entry continuation)
+  "Get info for ENTRY only if it is a premiere.
+Call CONTINUATION when finished."
+  (if (member elfeed-time-premiere-tag (elfeed-entry-tags entry))
+      (elfeed-time-get-premiere-info entry continuation)
+    (funcall (car continuation) entry (cdr continuation))))
+
+(defun elfeed-time-get-premiere-info (entry &optional continuation)
+  "Fetch the time when ENTRY will go live as a Youtube Premiere.
+Call CONTINUATION when finished."
+  (interactive (list (elfeed-time-current-entries nil)))
+  (setf continuation (or continuation (list #'ignore)))
+  (when (string-match-p (rx "youtube.com") (elfeed-entry-link entry))
+    (if elfeed-time-use-curl
+	(make-process :name "elfeed-time-get-premiere-time"
+		      :buffer (generate-new-buffer
+			       (format " *elfeed-time-premiere-time: %s*"
+				       (elfeed-entry-link entry)))
+		      :command (cl-list* elfeed-curl-program-name
+					 (elfeed-time-curl-args
+					  (elfeed-entry-link entry)))
+		      :noquery t
+		      :sentinel (elfeed-time--process-sentinel
+				 #'elfeed-time-premiere-parse
+				 entry continuation))
+      (url-retrieve (elfeed-entry-link entry)
+		    (elfeed-time--url-retrieve-callback
+		     #'elfeed-time-premiere-parse
+		     entry continuation)
+		    nil t))))
+
+(defun elfeed-time-ffprobe-supported-extensions ()
+  "Return a list of extensions supported by ffprobe."
+  (unless elfeed-time-ffprobe-format-cache
+    (setf elfeed-time-ffprobe-format-cache
+	  (split-string (shell-command-to-string
+			 (format "%s %s | %s | %s"
+				 elfeed-time-ffprobe-program-name
+				 "-hide_banner -demuxers"
+				 ;; skip section header
+				 "sed -e '1,/--/d'"
+				 ;; filter to second column
+				 "awk '{print $2}'"))
+			(rx (any "\n,")) t)))
+  elfeed-time-ffprobe-format-cache)
+
+(defun elfeed-time-maybe-get-podcast-info (entry continuation)
+  "Get the length of ENTRY if its a podcast.
+Call CONTINUATION when finished."
+  (if (member elfeed-time-podcast-tag (elfeed-entry-tags entry))
+      (elfeed-time-get-enclosure-time entry continuation)
+    (funcall (car continuation) entry (cdr continuation))))
+
+;;; TODO make async
+(defun elfeed-time-get-enclosure-time (entry &optional continuation)
+  "Store the length of the longest enclosure of ENTRY in ENTRY's meta plist.
+Call CONTINUATION when finished."
+  (interactive (list (elfeed-time-current-entries nil) nil))
+  (setf continuation (or continuation (list #'ignore)))
+  (when-let ((enclosures (seq-filter (lambda (url)
+				       (member (substring (url-file-extension url) 1)
+
+					       (elfeed-time-ffprobe-supported-extensions)))
+				     (mapcar #'car (elfeed-entry-enclosures entry)))))
+    (setf (elfeed-meta entry :et-length-in-seconds)
+	  (cl-loop for url in enclosures
+		   maximizing (cl-parse-integer
+			       (shell-command-to-string
+				(mapconcat #'identity
+					   (cl-list* elfeed-time-ffprobe-program-name
+						     (concat "\"" url "\"")
+						     elfeed-time-ffprobe-arguments)
+					   " "))
+			       :junk-allowed t))))
+  (funcall (car continuation) entry (cdr continuation)))
 
 (defun elfeed-time-curl-args (url &optional headers method data)
   "Build an argument list for curl for URL.
@@ -419,6 +576,140 @@ Call CONTINUATION when finished."
 	  (elfeed-untag entry elfeed-time-unreadable-tag)))))
   (funcall (car continuation) entry (cdr continuation)))
 
+(defun elfeed-time-count-entry-words (entry &optional continuation)
+  "Add the word count of ENTRY to the entry's metadata.
+Call CONTINUATION when finished.
+
+Adapted from `elfeed-show-refresh--mail-style'."
+  (interactive (list (elfeed-time-current-entries nil)))
+  (setf continuation (or continuation (list #'ignore)))
+  (let* ((meta-content-p (elfeed-meta entry :et-content))
+	 (type (if meta-content-p
+		   (elfeed-meta entry :et-content-type)
+		 (elfeed-entry-content-type entry)))
+	 (feed (elfeed-entry-feed entry))
+	 (content (elfeed-deref (if meta-content-p
+				    (elfeed-meta entry :et-content)
+				  (elfeed-entry-content entry))))
+	 (base (and feed (elfeed-compute-base (elfeed-feed-url feed)))))
+    (with-temp-buffer
+      (when content
+        (if (eq type 'html)
+            (elfeed-insert-html content base)
+          (insert content)))
+      (setf (elfeed-meta entry :et-word-count)
+	    (count-words (point-min) (point-max)))))
+  (funcall (car continuation) entry (cdr continuation)))
+
+(defun elfeed-time-new-entry (entry)
+  "Store the time it will take to read/watch/listen to ENTRY.
+This is called once per entry, as a part of
+`elfeed-new-entry-hook', and should be used for longer
+operations, such as network requests."
+  (let ((funs (append elfeed-time-new-entry-functions (list #'ignore))))
+    (funcall (car funs) entry (cdr funs))))
+
+(defun elfeed-time-premiere-time (entry)
+  "Reutrn the number of seconds after ENTRY's start, or nil if not a premiere.
+The number returned will be negative if the premiere hasn't
+started yet."
+  (let ((start (elfeed-meta entry :et-premiere-time)))
+    (when (numberp start)
+      (- (time-convert nil 'integer) start))))
+
+(defun elfeed-time-video-time (entry)
+  "Return the length of ENTRY as a video in seconds."
+  (let ((length (elfeed-meta entry :et-length-in-seconds)))
+    (when (numberp length)
+      length)))
+
+(defun elfeed-time-podcast-time (entry)
+  "Return the length of ENTRY as a podcast in seconds."
+  (let ((length (elfeed-meta entry :et-length-in-seconds)))
+    (when (numberp length)
+      length)))
+
+(defun elfeed-time-text-time (entry)
+  "Return the length of ENTRY as derived from it's word count."
+  (when (and (numberp (elfeed-meta entry :et-word-count))
+	     (not (zerop elfeed-time-reading-speed)))
+    (/ (* 60 (elfeed-meta entry :et-word-count))
+       elfeed-time-reading-speed)))
+
+(defun elfeed-time-compute-entry-time (entry)
+  "Return the time it will take to read/watch/listen to ENTRY.
+This is called many times as a part of sorting the elfeed-search
+buffer by entry-time, and should be used only for fast
+operations."
+  (cl-loop for fun in elfeed-time-entry-time-functions
+	   when (funcall fun entry)
+	   return it
+	   finally return 0))
+
+(defun elfeed-time-compare-entries (entry-1 entry-2)
+  "Compare how long it would take to read ENTRY-1 and ENTRY-2.
+
+This function can be used as the `elfeed-search-sort-function',
+and is therefore also suitable as the predicate for `sort'."
+  (< (elfeed-time-compute-entry-time entry-1)
+     (elfeed-time-compute-entry-time entry-2)))
+
+(defun elfeed-time-format-seconds (string seconds)
+  "Use format control STRING to format the number SECONDS.
+When SECONDS is negative, take its absolute value and prepend a
+negative sign. All format specifiers are as in `format-seconds'."
+  (concat (if (< seconds 0) "-" "")
+	  (format-seconds string (abs seconds))))
+
+(defun elfeed-time-format-seconds-max-length (format-string max-seconds)
+  "Return the maximum length in characters that FORMAT-STRING can be.
+Use MAX-SECONDS as the largest time to expect."
+  (1+ (length (elfeed-time-format-seconds format-string (abs max-seconds)))))
+
+;; TODO account for cjk chars
+;; see "min-width" display specification in emacs 29
+;; https://lars.ingebrigtsen.no/2021/11/24/the-most-controversial-change-in-emacs-history/
+(defun elfeed-time-search-print-entry (entry)
+  "Print ENTRY to the `elfeed-search-mode' buffer.
+
+ Adapted from `elfeed-search-print-entry--default'"
+  (let* ((date (elfeed-search-format-date (elfeed-entry-date entry)))
+         (title (or (elfeed-meta entry :title) (elfeed-entry-title entry) ""))
+         (title-faces (elfeed-search--faces (elfeed-entry-tags entry)))
+         (feed (elfeed-entry-feed entry))
+         (feed-title
+          (when feed
+            (or (elfeed-meta feed :title) (elfeed-feed-title feed))))
+         (tags (mapcar #'symbol-name (elfeed-entry-tags entry)))
+         (tags-str (mapconcat
+                    (lambda (s) (propertize s 'face 'elfeed-search-tag-face))
+                    tags ","))
+         (title-width (- (window-width) 10 elfeed-search-trailing-width))
+         (title-column (bidi-string-mark-left-to-right
+			(elfeed-format-column
+                         title (elfeed-clamp
+				elfeed-search-title-min-width
+				title-width
+				elfeed-search-title-max-width)
+                         :left)))
+	 (time (elfeed-format-column (elfeed-time-format-seconds (concat elfeed-time-format-string " ")
+								 (elfeed-time-compute-entry-time entry))
+				     (1+ (elfeed-time-format-seconds-max-length elfeed-time-format-string
+										(* 1 60 60 24 30)))
+				     :right)))
+    (insert (propertize date 'face 'elfeed-search-date-face) " ")
+    ;; The faces are reversed so that faces earlier in
+    ;; `elfeed-search-face-alist' are applied later, and thus
+    ;; override faces already added
+    (dolist (face (reverse title-faces))
+      (add-face-text-property 0 (length title-column) face nil title-column))
+    (insert (propertize title-column 'kbd-help title) " ")
+    (insert (propertize time 'face 'elfeed-time-display))
+    (when feed-title
+      (insert (propertize feed-title 'face 'elfeed-search-feed-face) " "))
+    (when tags
+      (insert "(" tags-str ")"))))
+
 (defun elfeed-time-preprocess-content-readable (content content-type base)
   (if (eq content-type 'html)
       (elfeed-time-make-html-readable content base)
@@ -493,297 +784,6 @@ Adapted from `elfeed-show-refresh--mail-style'"
 				  'face 'message-header-other)))
       (goto-char (point-min)))
     (set-marker time-marker nil)))
-
-(defun elfeed-time-premiere-parse (entry buffer continuation)
-  "Parse the HTML in BUFFER to determine when ENTRY goes live.
-Call CONTINUATION when finished."
-  (with-current-buffer buffer
-    (elfeed-time--delete-http-header)
-    (goto-char (point-min))
-    (when (re-search-forward (rx "\"startTimestamp\":\""
-				 (group (1+ (not "\""))) "\"")
-			     nil t)
-      (setf (elfeed-meta entry :et-premiere-time)
-	    (time-convert (encode-time (iso8601-parse
-					(match-string 1)))
-			  'integer))
-      (with-current-buffer (elfeed-search-buffer)
-	(elfeed-search-update-entry entry)))
-    (kill-buffer buffer))
-  (funcall (car continuation) entry (cdr continuation)))
-
-(defun elfeed-time-maybe-get-premiere-info (entry continuation)
-  "Get info for ENTRY only if it is a premiere.
-Call CONTINUATION when finished."
-  (if (member elfeed-time-premiere-tag (elfeed-entry-tags entry))
-      (elfeed-time-get-premiere-info entry continuation)
-    (funcall (car continuation) entry (cdr continuation))))
-
-(defun elfeed-time-get-premiere-info (entry &optional continuation)
-  "Fetch the time when ENTRY will go live as a Youtube Premiere.
-Call CONTINUATION when finished."
-  (interactive (list (elfeed-time-current-entries nil)))
-  (setf continuation (or continuation (list #'ignore)))
-  (when (string-match-p (rx "youtube.com") (elfeed-entry-link entry))
-    (if elfeed-time-use-curl
-	(make-process :name "elfeed-time-get-premiere-time"
-		      :buffer (generate-new-buffer
-			       (format " *elfeed-time-premiere-time: %s*"
-				       (elfeed-entry-link entry)))
-		      :command (cl-list* elfeed-curl-program-name
-					 (elfeed-time-curl-args
-					  (elfeed-entry-link entry)))
-		      :noquery t
-		      :sentinel (elfeed-time--process-sentinel
-				 #'elfeed-time-premiere-parse
-				 entry continuation))
-      (url-retrieve (elfeed-entry-link entry)
-		    (elfeed-time--url-retrieve-callback
-		     #'elfeed-time-premiere-parse
-		     entry continuation)
-		    nil t))))
-
-(cl-defun elfeed-time-youtube-dl-args (&optional (program elfeed-time-youtube-dl-program))
-  "Return a list of arguments to pass to `elfeed-time-youtube-dl-program'."
-  (append (alist-get t elfeed-time-youtube-dl-args)
-	  (alist-get (file-name-base program)
-		     elfeed-time-youtube-dl-args
-		     nil nil #'equal)))
-
-(defun elfeed-time-maybe-get-video-info (entry continuation)
-  "Get ENTRY's length as a video if it is one.
-Call CONTINUATION when finished."
-  (if (member elfeed-time-video-tag (elfeed-entry-tags entry))
-      (elfeed-time-get-video-info entry continuation)
-    (funcall (car continuation) entry (cdr continuation))))
-
-(defun elfeed-time-get-video-info (entry &optional continuation)
-  "Fetch additonal metadata about ENTRY such as length, description, etc.
-Call CONTINUATION when finished."
-  (interactive (list (elfeed-time-current-entries nil)))
-  (setf continuation (or continuation (list #'ignore)))
-  (make-process :name "elfeed-time-get-video-length"
-		:buffer (generate-new-buffer
-			 (format " *elfeed-time-video-length: %s*"
-				 (elfeed-entry-link entry)))
-		:command (cl-list* elfeed-time-youtube-dl-program
-				   (elfeed-entry-link entry)
-				   (elfeed-time-youtube-dl-args))
-		:noquery t
-		:sentinel
-		(lambda (process event-string)
-		  (catch 'unknown-error
-		    (with-current-buffer (process-buffer process)
-		      (pcase event-string
-			((rx "exited abnormally")
-			 (goto-char (point-min))
-			 (cond ((re-search-forward (rx bol "ERROR: This live event will begin in a few moments.")
-						   nil t)
-				(setf (elfeed-meta entry :et-premiere-time)
-				      (time-convert nil 'integer)))
-			       ((re-search-forward (rx bol "ERROR: " (* anychar)
-						       (or "Premieres in" "This live event"))
-						   nil t)
-				(elfeed-tag entry elfeed-time-premiere-tag))
-			       ((re-search-forward (rx bol "ERROR: Private video") nil t)
-				(when (elfeed-meta entry :et-premiere-time)
-				  (setf (elfeed-meta entry :et-premiere-time) nil))
-				(when (or (and (functionp elfeed-time-ignore-private-videos)
-					       (funcall elfeed-time-ignore-private-videos entry))
-					  elfeed-time-ignore-private-videos)
-				  (elfeed-untag entry 'unread))
-				(elfeed-time-log 'warn entry "is a private video"))
-			       ((re-search-forward (rx bol "ERROR: " (* anychar)
-						       "Sign in to confirm your age")
-						   nil t)
-				(elfeed-time-log 'warn entry "is agegated"))
-			       (t
-				(elfeed-time-log 'error entry "Unknown error: %S"
-						 (buffer-string))
-				(throw 'unknown-error nil))))
-			((rx "finished")
-			 (goto-char (point-min))
-			 (while (re-search-forward (rx bol "WARNING: " (group (+ not-newline)) eol) nil t)
-			   (elfeed-time-log 'warn entry "%s" (match-string 1)))
-			 (let ((video-data (json-parse-buffer)))
-			   (setf (elfeed-meta entry :et-length-in-seconds) (gethash "duration" video-data)
-				 (elfeed-meta entry :et-content) (elfeed-ref (gethash "description" video-data)))
-			   (with-current-buffer (elfeed-search-buffer)
-			     (elfeed-search-update-entry entry))
-			   (when-let ((buffer-name (get-buffer (elfeed-show--buffer-name entry))))
-			     (with-current-buffer buffer-name
-			       (when (equal elfeed-show-entry entry)
-				 (elfeed-show-refresh))))))
-			(_ (throw 'unknown-error nil)))
-		      (kill-buffer (process-buffer process))
-		      (funcall (car continuation) entry (cdr continuation)))))))
-
-(defun elfeed-time-count-entry-words (entry &optional continuation)
-  "Add the word count of ENTRY to the entry's metadata.
-Call CONTINUATION when finished.
-
-Adapted from `elfeed-show-refresh--mail-style'."
-  (interactive (list (elfeed-time-current-entries nil)))
-  (setf continuation (or continuation (list #'ignore)))
-  (let* ((meta-content-p (elfeed-meta entry :et-content))
-	 (type (if meta-content-p
-		   (elfeed-meta entry :et-content-type)
-		 (elfeed-entry-content-type entry)))
-	 (feed (elfeed-entry-feed entry))
-	 (content (elfeed-deref (if meta-content-p
-				    (elfeed-meta entry :et-content)
-				  (elfeed-entry-content entry))))
-	 (base (and feed (elfeed-compute-base (elfeed-feed-url feed)))))
-    (with-temp-buffer
-      (when content
-        (if (eq type 'html)
-            (elfeed-insert-html content base)
-          (insert content)))
-      (setf (elfeed-meta entry :et-word-count)
-	    (count-words (point-min) (point-max)))))
-  (funcall (car continuation) entry (cdr continuation)))
-
-(defun elfeed-time-ffprobe-supported-extensions ()
-  "Return a list of extensions supported by ffprobe."
-  (unless elfeed-time-ffprobe-format-cache
-    (setf elfeed-time-ffprobe-format-cache
-	  (split-string (shell-command-to-string
-			 (format "%s %s | %s | %s"
-				 elfeed-time-ffprobe-program-name
-				 "-hide_banner -demuxers"
-				 ;; skip section header
-				 "sed -e '1,/--/d'"
-				 ;; filter to second column
-				 "awk '{print $2}'"))
-			(rx (any "\n,")) t)))
-  elfeed-time-ffprobe-format-cache)
-
-(defun elfeed-time-maybe-get-podcast-info (entry continuation)
-  "Get the length of ENTRY if its a podcast.
-Call CONTINUATION when finished."
-  (if (member elfeed-time-podcast-tag (elfeed-entry-tags entry))
-      (elfeed-time-get-enclosure-time entry continuation)
-    (funcall (car continuation) entry (cdr continuation))))
-
-;;; TODO make async
-(defun elfeed-time-get-enclosure-time (entry &optional continuation)
-  "Store the length of the longest enclosure of ENTRY in ENTRY's meta plist.
-Call CONTINUATION when finished."
-  (interactive (list (elfeed-time-current-entries nil) nil))
-  (setf continuation (or continuation (list #'ignore)))
-  (when-let ((enclosures (seq-filter (lambda (url)
-				       (member (substring (url-file-extension url) 1)
-
-					       (elfeed-time-ffprobe-supported-extensions)))
-				     (mapcar #'car (elfeed-entry-enclosures entry)))))
-    (setf (elfeed-meta entry :et-length-in-seconds)
-	  (cl-loop for url in enclosures
-		   maximizing (cl-parse-integer
-			       (shell-command-to-string
-				(mapconcat #'identity
-					   (cl-list* elfeed-time-ffprobe-program-name
-						     (concat "\"" url "\"")
-						     elfeed-time-ffprobe-arguments)
-					   " "))
-			       :junk-allowed t))))
-  (funcall (car continuation) entry (cdr continuation)))
-
-(defun elfeed-time-new-entry (entry)
-  "Store the time it will take to read/watch/listen to ENTRY.
-This is called once per entry, as a part of
-`elfeed-new-entry-hook', and should be used for longer
-operations, such as network requests."
-  (let ((funs (append elfeed-time-new-entry-functions (list #'ignore))))
-    (funcall (car funs) entry (cdr funs))))
-
-(defun elfeed-time-premiere-time (entry)
-  "Reutrn the number of seconds after ENTRY's start, or nil if not a premiere.
-The number returned will be negative if the premiere hasn't
-started yet."
-  (let ((start (elfeed-meta entry :et-premiere-time)))
-    (when (numberp start)
-      (- (time-convert nil 'integer) start))))
-
-(defun elfeed-time-video-time (entry)
-  "Return the length of ENTRY as a video in seconds."
-  (let ((length (elfeed-meta entry :et-length-in-seconds)))
-    (when (numberp length)
-      length)))
-
-(defun elfeed-time-podcast-time (entry)
-  "Return the length of ENTRY as a podcast in seconds."
-  (let ((length (elfeed-meta entry :et-length-in-seconds)))
-    (when (numberp length)
-      length)))
-
-(defun elfeed-time-text-time (entry)
-  "Return the length of ENTRY as derived from it's word count."
-  (when (and (numberp (elfeed-meta entry :et-word-count))
-	     (not (zerop elfeed-time-reading-speed)))
-    (/ (* 60 (elfeed-meta entry :et-word-count))
-       elfeed-time-reading-speed)))
-
-(defun elfeed-time-compute-entry-time (entry)
-  "Return the time it will take to read/watch/listen to ENTRY.
-This is called many times as a part of sorting the elfeed-search
-buffer by entry-time, and should be used only for fast
-operations."
-  (cl-loop for fun in elfeed-time-entry-time-functions
-	   when (funcall fun entry)
-	   return it
-	   finally return 0))
-
-;; TODO account for cjk chars
-;; see "min-width" display specification in emacs 29
-;; https://lars.ingebrigtsen.no/2021/11/24/the-most-controversial-change-in-emacs-history/
-(defun elfeed-time-search-print-entry (entry)
-  "Print ENTRY to the `elfeed-search-mode' buffer.
-
- Adapted from `elfeed-search-print-entry--default'"
-  (let* ((date (elfeed-search-format-date (elfeed-entry-date entry)))
-         (title (or (elfeed-meta entry :title) (elfeed-entry-title entry) ""))
-         (title-faces (elfeed-search--faces (elfeed-entry-tags entry)))
-         (feed (elfeed-entry-feed entry))
-         (feed-title
-          (when feed
-            (or (elfeed-meta feed :title) (elfeed-feed-title feed))))
-         (tags (mapcar #'symbol-name (elfeed-entry-tags entry)))
-         (tags-str (mapconcat
-                    (lambda (s) (propertize s 'face 'elfeed-search-tag-face))
-                    tags ","))
-         (title-width (- (window-width) 10 elfeed-search-trailing-width))
-         (title-column (bidi-string-mark-left-to-right
-			(elfeed-format-column
-                         title (elfeed-clamp
-				elfeed-search-title-min-width
-				title-width
-				elfeed-search-title-max-width)
-                         :left)))
-	 (time (elfeed-format-column (elfeed-time-format-seconds (concat elfeed-time-format-string " ")
-								 (elfeed-time-compute-entry-time entry))
-				     (1+ (elfeed-time-format-seconds-max-length elfeed-time-format-string
-										(* 1 60 60 24 30)))
-				     :right)))
-    (insert (propertize date 'face 'elfeed-search-date-face) " ")
-    ;; The faces are reversed so that faces earlier in
-    ;; `elfeed-search-face-alist' are applied later, and thus
-    ;; override faces already added
-    (dolist (face (reverse title-faces))
-      (add-face-text-property 0 (length title-column) face nil title-column))
-    (insert (propertize title-column 'kbd-help title) " ")
-    (insert (propertize time 'face 'elfeed-time-display))
-    (when feed-title
-      (insert (propertize feed-title 'face 'elfeed-search-feed-face) " "))
-    (when tags
-      (insert "(" tags-str ")"))))
-
-(defun elfeed-time-compare-entries (entry-1 entry-2)
-  "Compare how long it would take to read ENTRY-1 and ENTRY-2.
-
-This function can be used as the `elfeed-search-sort-function',
-and is therefore also suitable as the predicate for `sort'."
-  (< (elfeed-time-compute-entry-time entry-1)
-     (elfeed-time-compute-entry-time entry-2)))
 
 ;;; Convenience functions
 
