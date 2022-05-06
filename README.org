@@ -54,6 +54,7 @@ For example, if you don't subscribe to any podcasts with elfeed, you won't need 
 #+begin_src elisp
   (setf elfeed-time-reading-speed 250)
   (setf elfeed-time-ignore-private-videos t)
+  (setf elfeed-time-update-entries-after-hook-p t)
 
   (setf elfeed-search-sort-function #'elfeed-time-compare-entries)
   (setf elfeed-sort-order 'ascending)

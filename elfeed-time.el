@@ -54,6 +54,11 @@ For information on possible specifiers, see
   :group 'elfeed-time
   :type 'string)
 
+(defcustom elfeed-time-update-entries-after-hook-p nil
+  "Whether or not to automatically update buffers after async functions."
+  :group 'elfeed-time
+  :type 'boolean)
+
 (defcustom elfeed-time-use-curl elfeed-use-curl
   "If non-nil, fetch full content using curl instead of `url-retrieve'."
   :group 'elfeed-time
@@ -327,13 +332,7 @@ Call CONTINUATION when finished."
 			   (elfeed-time-log 'warn entry "%s" (match-string 1)))
 			 (let ((video-data (json-parse-buffer)))
 			   (setf (elfeed-meta entry :et-length-in-seconds) (gethash "duration" video-data)
-				 (elfeed-meta entry :et-content) (elfeed-ref (gethash "description" video-data)))
-			   (with-current-buffer (elfeed-search-buffer)
-			     (elfeed-search-update-entry entry))
-			   (when-let ((buffer-name (get-buffer (elfeed-show--buffer-name entry))))
-			     (with-current-buffer buffer-name
-			       (when (equal elfeed-show-entry entry)
-				 (elfeed-show-refresh))))))
+				 (elfeed-meta entry :et-content) (elfeed-ref (gethash "description" video-data)))))
 			(_ (throw 'unknown-error nil)))
 		      (kill-buffer (process-buffer process))
 		      (funcall (car continuation) entry (cdr continuation)))))))
@@ -350,9 +349,7 @@ Call CONTINUATION when finished."
       (setf (elfeed-meta entry :et-premiere-time)
 	    (time-convert (encode-time (iso8601-parse
 					(match-string 1)))
-			  'integer))
-      (with-current-buffer (elfeed-search-buffer)
-	(elfeed-search-update-entry entry)))
+			  'integer)))
     (kill-buffer buffer))
   (funcall (car continuation) entry (cdr continuation)))
 
@@ -601,12 +598,25 @@ Adapted from `elfeed-show-refresh--mail-style'."
 	    (count-words (point-min) (point-max)))))
   (funcall (car continuation) entry (cdr continuation)))
 
+(defun elfeed-time-update-entry (entry)
+  "Update all elfeed buffers displaying ENTRY."
+  (with-current-buffer (elfeed-search-buffer)
+    (elfeed-search-update-entry entry))
+  (when-let ((buffer-name (get-buffer (elfeed-show--buffer-name entry))))
+    (with-current-buffer buffer-name
+      (when (equal elfeed-show-entry entry)
+	(elfeed-show-refresh)))))
+
 (defun elfeed-time-new-entry (entry)
   "Store the time it will take to read/watch/listen to ENTRY.
 This is called once per entry, as a part of
 `elfeed-new-entry-hook', and should be used for longer
 operations, such as network requests."
-  (let ((funs (append elfeed-time-new-entry-functions (list #'ignore))))
+  (let ((funs (append elfeed-time-new-entry-functions
+		      (list (if elfeed-time-update-entries-after-hook-p
+				(lambda (entry _continuation)
+				  (elfeed-time-update-entry entry))
+			      #'ignore)))))
     (funcall (car funs) entry (cdr funs))))
 
 (defun elfeed-time-premiere-time (entry)
