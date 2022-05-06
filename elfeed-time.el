@@ -294,6 +294,7 @@ Call CONTINUATION when finished."
 		:command (cl-list* elfeed-time-youtube-dl-program
 				   (elfeed-entry-link entry)
 				   (elfeed-time-youtube-dl-args))
+		:connection-type 'pipe
 		:noquery t
 		:sentinel
 		(lambda (process event-string)
@@ -374,6 +375,7 @@ Call CONTINUATION when finished."
 		      :command (cl-list* elfeed-curl-program-name
 					 (elfeed-time-curl-args
 					  (elfeed-entry-link entry)))
+		      :connection-type 'pipe
 		      :noquery t
 		      :sentinel (elfeed-time--process-sentinel
 				 #'elfeed-time-premiere-parse
@@ -491,6 +493,7 @@ Call CONTINUATION when finished."
 				       (elfeed-time-curl-args
 					(elfeed-entry-link entry)
 					`(("User-Agent" . ,elfeed-user-agent))))
+		    :connection-type 'pipe
 		    :noquery t
 		    :sentinel (elfeed-time--process-sentinel
 			       #'elfeed-time--set-full-content
