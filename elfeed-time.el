@@ -234,6 +234,47 @@ negative sign. All format specifiers are as in `format-seconds'."
 Use MAX-SECONDS as the largest time to expect."
   (1+ (length (elfeed-time-format-seconds format-string (abs max-seconds)))))
 
+(defun elfeed-time-log (level entry format &rest objects)
+  "Write log message FORMAT at LEVEL about ENTRY to elfeed's log buffer.
+FORMAT must be a string suitable for `format' given OBJECTS as arguments."
+  (elfeed-log level
+	      (concat "elfeed-time [%s]: " format)
+	      (cons (elfeed-entry-link entry)
+		    objects)))
+
+(defun elfeed-time--process-sentinel (fun entry continuation)
+  "Return a sentinel function suitable for `make-process'.
+When the process exits, if no errors occur, call FUN with ENTRY,
+the process buffer, and CONTINUATION as arguments. If errors
+occur, log them."
+  (lambda (process event-string)
+    (when (not (process-live-p process))
+      (if (string-match-p (rx "finished") event-string)
+	  (funcall fun entry (process-buffer process) continuation)
+	(elfeed-time-log 'error entry "%S (Exit code %s) %s"
+			 event-string (process-exit-status process)
+			 (with-current-buffer (process-buffer process)
+			   (buffer-string)))))))
+
+(defun elfeed-time--url-retrieve-callback (fun entry continuation)
+  "Return a callback function suitable for `url-retrieve'.
+When the callback is called, log all status events, and if no
+errors occured, call FUN with ENTRY, the current buffer, and
+CONTINUATION as arguments."
+  (lambda (status &rest _rest)
+    (let ((error-p nil))
+      (while status
+	(pcase (list (pop status) (pop status))
+	  (`(:redirect ,redirect-to)
+	   (elfeed-time-log 'debug entry
+			    "Redirected to %S" redirect-to))
+	  (`(:error (,error ,type . ,data))
+	   (setf error-p t)
+	   (elfeed-time-log 'error entry "%s, %s, %s"
+			    error type data))))
+      (unless error-p
+	(funcall fun entry (current-buffer) continuation)))))
+
 (defun elfeed-time-curl-args (url &optional headers method data)
   "Build an argument list for curl for URL.
 URL must be one string.
@@ -297,14 +338,13 @@ Call CONTINUATION when finished."
 					(elfeed-entry-link entry)
 					`(("User-Agent" . ,elfeed-user-agent))))
 		    :noquery t
-		    :sentinel (lambda (process event-string)
-				(when (string-match-p (rx "finished") event-string)
-				  (elfeed-time--set-full-content
-				   entry (process-buffer process) continuation))))
+		    :sentinel (elfeed-time--process-sentinel
+			       #'elfeed-time--set-full-content
+			       entry continuation))
     (url-retrieve (elfeed-entry-link entry)
-		  (lambda (_status)
-		    (elfeed-time--set-full-content
-		     entry (current-buffer) continuation))
+		  (elfeed-time--url-retrieve-callback
+		   #'elfeed-time--set-full-content
+		   entry continuation)
 		  nil t)))
 
 (defun elfeed-time-serialize-dom (dom)
@@ -494,15 +534,14 @@ Call CONTINUATION when finished."
 					 (elfeed-time-curl-args
 					  (elfeed-entry-link entry)))
 		      :noquery t
-		      :sentinel (lambda (process event-string)
-				  (when (string-match-p (rx "finished")
-							event-string)
-				    (elfeed-time-premiere-parse
-				     entry (process-buffer process) continuation))))
+		      :sentinel (elfeed-time--process-sentinel
+				 #'elfeed-time-premiere-parse
+				 entry continuation))
       (url-retrieve (elfeed-entry-link entry)
-		    (lambda (_status)
-		      (elfeed-time-premiere-parse
-		       entry (current-buffer) continuation))))))
+		    (elfeed-time--url-retrieve-callback
+		     #'elfeed-time-premiere-parse
+		     entry continuation)
+		    nil t))))
 
 (cl-defun elfeed-time-youtube-dl-args (&optional (program elfeed-time-youtube-dl-program))
   "Return a list of arguments to pass to `elfeed-time-youtube-dl-program'."
@@ -553,16 +592,20 @@ Call CONTINUATION when finished."
 					       (funcall elfeed-time-ignore-private-videos entry))
 					  elfeed-time-ignore-private-videos)
 				  (elfeed-untag entry 'unread))
-				(message "%s is a private video" (elfeed-entry-link entry)))
+				(elfeed-time-log 'warn entry "is a private video"))
 			       ((re-search-forward (rx bol "ERROR: " (* anychar)
 						       "Sign in to confirm your age")
 						   nil t)
-				(message "%s is agegated" (elfeed-entry-link entry)))
-			       (t (throw 'unknown-error nil))))
+				(elfeed-time-log 'warn entry "is agegated"))
+			       (t
+				(elfeed-time-log 'error entry "Unknown error: %S"
+						 (buffer-string))
+				(throw 'unknown-error nil))))
 			((rx "finished")
-			 ;;; TODO strip, and log warnings
-			 (let ((video-data (progn (goto-char (point-min))
-						  (json-parse-buffer))))
+			 (goto-char (point-min))
+			 (while (re-search-forward (rx bol "WARNING: " (group (+ not-newline)) eol) nil t)
+			   (elfeed-time-log 'warn entry "%s" (match-string 1)))
+			 (let ((video-data (json-parse-buffer)))
 			   (setf (elfeed-meta entry :et-length-in-seconds) (gethash "duration" video-data)
 				 (elfeed-meta entry :et-content) (elfeed-ref (gethash "description" video-data)))
 			   (with-current-buffer (elfeed-search-buffer)
