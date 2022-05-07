@@ -32,6 +32,7 @@
 (require 'shr)
 (require 'cl-lib)
 (require 'ietf-drums)
+(require 'iso8601)
 
 (defgroup elfeed-time nil
   "Display the length of an article, video, or podcast in elfeed."
