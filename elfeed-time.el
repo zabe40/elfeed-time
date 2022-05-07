@@ -723,7 +723,6 @@ Adapted from `elfeed-show-refresh--mail-style'"
          (link (elfeed-entry-link elfeed-show-entry))
          (tags (elfeed-entry-tags elfeed-show-entry))
          (tagsstr (mapconcat #'symbol-name tags ", "))
-	 (time-marker (make-marker))
          (nicedate (format-time-string "%a, %e %b %Y %T %Z" date))
 	 (meta-content-p (elfeed-meta elfeed-show-entry :et-content))
 	 (content (elfeed-deref (if meta-content-p
@@ -751,7 +750,12 @@ Adapted from `elfeed-show-refresh--mail-style'"
     (when tags
       (insert (format (propertize "Tags: %s\n" 'face 'message-header-name)
 		      (propertize tagsstr 'face 'message-header-other))))
-    (set-marker time-marker (point))
+    (insert (format (propertize "Time: %s\n" 'face 'message-header-name)
+		    (propertize (elfeed-time-format-seconds
+				 elfeed-time-format-string
+				 (elfeed-time-compute-entry-time
+				  elfeed-show-entry))
+				'face 'message-header-other)))
     (insert (propertize "Link: " 'face 'message-header-name))
     (elfeed-insert-link link link)
     (insert "\n")
@@ -767,17 +771,7 @@ Adapted from `elfeed-show-refresh--mail-style'"
 		   (elfeed-insert-html content base)
 		 (insert content)))
       (insert (propertize "(empty)\n" 'face 'italic)))
-    (goto-char (point-min))
-    (when (or (< (window-end (selected-window) t)
-		 (point-max))
-	      (integerp (elfeed-meta elfeed-show-entry :et-length-in-seconds)))
-      (goto-char time-marker)
-      (insert (format (propertize "Time: %s\n" 'face 'message-header-name)
-		      (propertize (elfeed-time-format-seconds elfeed-time-format-string
-							      (elfeed-time-compute-entry-time elfeed-show-entry))
-				  'face 'message-header-other)))
-      (goto-char (point-min)))
-    (set-marker time-marker nil)))
+    (goto-char (point-min))))
 
 ;;; Convenience functions
 
