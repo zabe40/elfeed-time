@@ -29,6 +29,7 @@
 
 (require 'elfeed)
 (require 'dom)
+(require 'shr)
 (require 'cl-lib)
 (require 'ietf-drums)
 
@@ -504,28 +505,6 @@ Call CONTINUATION when finished."
 		   entry continuation)
 		  nil t)))
 
-(defun elfeed-time-serialize-dom (dom)
-  "Serialize an HTML or XML DOM into a string."
-  (let ((dom-depth (or (bound-and-true-p dom-depth) 0)))
-    (cl-typecase dom
-      (string dom)
-      (t (let ((tag (dom-tag dom))
-	       (attributes (dom-attributes dom))
-	       (children (dom-children dom))
-	       (dom-depth (1+ dom-depth)))
-	   (format "<%s %s>\n%s</%s>"
-		   tag
-		   (mapconcat (lambda (attribute-pair)
-				(format "%s=\"%s\""
-					(car attribute-pair)
-					(cdr attribute-pair)))
-			      attributes " ")
-		   (mapconcat (lambda (child)
-				(concat (make-string dom-depth ?\s)
-					(elfeed-time-serialize-dom child)))
-			      children "\n")
-		   tag))))))
-
 (defun elfeed-time-make-html-readable (html base)
   "Return the main \"readable\" parts of HTML.
 Use BASE as the default url for relative links.
@@ -541,8 +520,10 @@ Adapted from `eww-readable'"
                  (eww--preprocess-html (point-min) (point-max))
 		 (libxml-parse-html-region (point-min) (point-max)))))
       (eww-score-readability dom)
-      (elfeed-time-serialize-dom (list 'base (list (cons 'href base))
-				       (eww-highest-readability dom))))))
+      (with-temp-buffer
+	(shr-dom-print (list 'base (list (cons 'href base))
+			     (eww-highest-readability dom)))
+	(buffer-string)))))
 
 (defun elfeed-time-maybe-make-entry-readable (entry continuation)
   "Make ENTRY readable if it is unreadable.
