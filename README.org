@@ -35,7 +35,6 @@ This advice is needed because elfeed doesn't currently have a way to tell it's g
 *** Add what you need
 For example, if you don't subscribe to any podcasts with elfeed, you won't need to add ~elfeed-time-maybe-get-podcast-info~ to ~elfeed-time-new-entry-functions~.
 #+begin_src elisp
-  ;; Recommended depending on your needs
   (add-hook 'elfeed-new-entry-hook
 	    (elfeed-make-tagger :feed-url (rx "youtube.com")
 				:add '(video)))
