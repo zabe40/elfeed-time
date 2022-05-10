@@ -23,7 +23,7 @@ elfeed-time can measure the length of:
 #+end_src
 *** Strongly Recommended
 This advice is needed because elfeed doesn't currently have a way to tell it's garbage collector about the elfeed-refs we create with ~elfeed-time-maybe-get-video-info~ and ~elfeed-time-maybe-get-full-content~. Without the advice, the refs in the ~:et-content~ meta slot would be deleted by ~elfeed-db-gc~. For more information see [[https://github.com/skeeto/elfeed/issues/376][this issue]], and [[https://github.com/skeeto/elfeed/pull/457][this pull request]].
-  #+begin_src elisp
+#+begin_src elisp
   (advice-add 'elfeed-db-gc :override #'elfeed-time-db-gc-trace-meta)
 #+end_src
 *** Recommended
