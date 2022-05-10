@@ -43,6 +43,17 @@
   :group 'elfeed-time
   :type 'number)
 
+(defcustom elfeed-time-speed-multiplier nil
+  "The default speed multiplier for videos and podcasts. Must not be 0.
+A value of nil means normal speed, that is, 1."
+  :group 'elfeed-time
+  :type '(choice number
+		 (const :tag "Normal speed" nil))
+  :set (lambda (symbol value)
+	 (if (and (numberp value) (zerop value))
+	     (user-error "%S must not be zero" symbol)
+	   (set symbol value))))
+
 (defcustom elfeed-time-format-string "%h:%z%.2m:%.2s"
   "The format control string for displaying times for entries.
 For information on possible specifiers, see `format-seconds'."
@@ -228,6 +239,27 @@ otherwise, return the primary selected entry."
 			  (list elfeed-show-entry)
 			elfeed-show-entry))
     (t (user-error "Can't get current entries. Not in an elfeed mode"))))
+
+(defun elfeed-time-update-entry (entry)
+  "Update all elfeed buffers displaying ENTRY."
+  (with-current-buffer (elfeed-search-buffer)
+    (elfeed-search-update-entry entry))
+  (when-let ((buffer-name (get-buffer (elfeed-show--buffer-name entry))))
+    (with-current-buffer buffer-name
+      (when (equal elfeed-show-entry entry)
+	(elfeed-show-refresh)))))
+
+(defun elfeed-time-update-feed (feed)
+  "Update all elfeed buffers displaying an entry from FEED."
+  (with-current-buffer (elfeed-search-buffer)
+    (dolist (entry elfeed-search-entries)
+      (when (equal feed (elfeed-entry-feed entry))
+	(elfeed-search-update-entry entry))))
+  (dolist (buffer (buffer-list))
+    (with-current-buffer buffer
+      (when (and (derived-mode-p 'elfeed-show-mode)
+		 (equal feed (elfeed-entry-feed elfeed-show-entry)))
+	(elfeed-show-refresh)))))
 
 (defun elfeed-time-log (level entry format &rest objects)
   "Write log message FORMAT at LEVEL about ENTRY to elfeed's log buffer.
@@ -583,15 +615,6 @@ Adapted from `elfeed-show-refresh--mail-style'."
 	    (count-words (point-min) (point-max)))))
   (funcall (car continuation) entry (cdr continuation)))
 
-(defun elfeed-time-update-entry (entry)
-  "Update all elfeed buffers displaying ENTRY."
-  (with-current-buffer (elfeed-search-buffer)
-    (elfeed-search-update-entry entry))
-  (when-let ((buffer-name (get-buffer (elfeed-show--buffer-name entry))))
-    (with-current-buffer buffer-name
-      (when (equal elfeed-show-entry entry)
-	(elfeed-show-refresh)))))
-
 (defun elfeed-time-new-entry (entry)
   "Store the time it will take to read/watch/listen to ENTRY.
 This is called once per entry, as a part of
@@ -612,17 +635,77 @@ started yet."
     (when (numberp start)
       (- (time-convert nil 'integer) start))))
 
+(defun elfeed-time-read-divisor (prompt &optional default)
+  "Read a nonzero number from the minibuffer, prompting with PROMPT.
+DEFAULT is as in `read-number'."
+  (let ((answer 0))
+    (while (= answer 0)
+      (setf answer (read-number prompt default))
+      (when (= answer 0)
+	(message "Please enter a nonzero number")
+	(sit-for 1.5)))
+    answer))
+
+(defun elfeed-time-set-feed-speed (feed speed)
+  "Set FEED's :et-speed-multiplier to SPEED."
+  (interactive (let ((feed (elfeed-entry-feed (elfeed-time-current-entries nil))))
+		 (list feed
+		       (elfeed-time-read-divisor
+			"Speed: "
+			(elfeed-meta feed :et-speed-multiplier)))))
+  (setf (elfeed-meta feed :et-speed-multiplier) speed)
+  (elfeed-time-update-feed feed))
+
+(defun elfeed-time-reset-feed-speed (feed)
+  "Reset FEED's speed-multiplier to 1."
+  (interactive (let ((completion-extra-properties
+		      ;; TODO use :affixation function in emacs 28
+		      (list :annotation-function
+			    (lambda (feed-url)
+			      (when-let ((feed (gethash feed-url elfeed-db-feeds))
+					 (speed (elfeed-meta
+						 feed :et-speed-multiplier)))
+				(format " %s %s"
+					(or (elfeed-meta feed :title)
+					    (elfeed-feed-title feed))
+					speed))))))
+		 (list (gethash (completing-read
+				 "Feed: " elfeed-db-feeds
+				 (lambda (key value)
+				   (let ((speed (elfeed-meta
+						 value :et-speed-multiplier)))
+				     (and speed (not (equal 1 speed)))))
+				 t)
+				elfeed-db-feeds))))
+  (setf (elfeed-meta feed :et-speed-multiplier) nil)
+  (elfeed-time-update-feed feed))
+
+(defun elfeed-time-scale-entry-time (entry seconds)
+  "Return SECONDS scaled by the appropriate amount.
+First check if ENTRY's feed specifies a multiplier, then check
+`elfeed-time-speed-multiplier'. If neither are non-nil and
+non-zero, then return SECONDS unchanged."
+  (/ seconds
+     (or (when-let ((speed (elfeed-meta (elfeed-entry-feed entry)
+					:et-speed-multiplier))
+		    ((not (zerop speed))))
+	   speed)
+	 (when-let ((speed elfeed-time-speed-multiplier)
+		    ((not (zerop speed))))
+	   speed)
+	 1)))
+
 (defun elfeed-time-video-time (entry)
   "Return the length of ENTRY as a video in seconds."
   (let ((length (elfeed-meta entry :et-length-in-seconds)))
     (when (numberp length)
-      length)))
+      (elfeed-time-scale-entry-time entry length))))
 
 (defun elfeed-time-podcast-time (entry)
   "Return the length of ENTRY as a podcast in seconds."
   (let ((length (elfeed-meta entry :et-length-in-seconds)))
     (when (numberp length)
-      length)))
+      (elfeed-time-scale-entry-time entry length))))
 
 (defun elfeed-time-text-time (entry)
   "Return the length of ENTRY as derived from it's word count."

@@ -60,6 +60,7 @@ For example, if you don't subscribe to any podcasts with elfeed, you won't need 
   (setf elfeed-search-sort-function #'elfeed-time-compare-entries)
   (setf elfeed-sort-order 'ascending)
 #+end_src
+elfeed-time can also account for the fact that you might play some of your videos and podcasts at 2x speed. Just set that feed's speed by calling the function ~elfeed-time-set-feed-speed~, or set a default speed multiplier for all videos and podcasts by setting the variable ~elfeed-time-speed-multiplier~.
 ** Technical Limitations
  * I haven't figured out a good way to determine how long it takes to read webcomics. Perhaps sort them into webcomics that publish chapters VS pages at a time? Or maybe try to measure it's length in inches and have a variable for inches per second?
  * Newsletters pose a similar problem, since they can have many links, and it's impossible to know which set of links you'll follow.
