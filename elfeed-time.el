@@ -385,6 +385,11 @@ Call CONTINUATION when finished."
 	    (time-convert (encode-time (iso8601-parse
 					(match-string 1)))
 			  'integer)))
+    (goto-char (point-min))
+    (when (re-search-forward (rx "<meta " (or "name" "itemprop") "=\"description\" "
+				 "content=\"" (group (1+ (not "\""))) "\""))
+      (setf (elfeed-meta entry :et-content)
+	    (match-string 1)))
     (kill-buffer buffer))
   (funcall (car continuation) entry (cdr continuation)))
 
