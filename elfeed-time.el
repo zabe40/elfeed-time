@@ -459,7 +459,7 @@ When FORCE-RELOAD is non-nil regenerate the list."
 	(kill-buffer))))
   elfeed-time-ffprobe-format-cache)
 
-(defun elfeed-time--ffprobe-enclosure-supported-p (enclosure)
+(defun elfeed-time-ffprobe-supports-enclosure-p (enclosure)
   "Return ENCLOSURE if it can be demuxed by ffprobe.
 Otherwise, return nil."
   (when (member (substring (url-file-extension (car enclosure)) 1)
@@ -488,7 +488,7 @@ Call CONTINUATION when finished."
 Call CONTINUATION when finished."
   (interactive (list (elfeed-time-current-entries nil)))
   (setf continuation (or continuation (list #'ignore)))
-  (let ((enclosures (mapcar #'elfeed-time--ffprobe-enclosure-supported-p
+  (let ((enclosures (mapcar #'elfeed-time-ffprobe-supports-enclosure-p
 			    (elfeed-entry-enclosures entry))))
     (when (cl-some #'identity enclosures)
       (setf (elfeed-meta entry :et-enclosure-times)
