@@ -436,9 +436,11 @@ Call CONTINUATION when finished."
 		     entry continuation)
 		    nil t))))
 
-(defun elfeed-time-ffprobe-supported-extensions ()
-  "Return a list of extensions supported by ffprobe."
-  (unless elfeed-time-ffprobe-format-cache
+(defun elfeed-time-ffprobe-supported-extensions (&optional force-reload)
+  "Return a list of extensions supported by ffprobe.
+When FORCE-RELOAD is non-nil regenerate the list."
+  (when (or force-reload (null elfeed-time-ffprobe-format-cache))
+    (setf elfeed-time-ffprobe-format-cache nil)
     (let ((buffer (generate-new-buffer " *elfeed-time-ffprobe-demuxers*")))
       (with-current-buffer buffer
 	(call-process elfeed-time-ffprobe-program-name nil
