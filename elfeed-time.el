@@ -439,16 +439,22 @@ Call CONTINUATION when finished."
 (defun elfeed-time-ffprobe-supported-extensions ()
   "Return a list of extensions supported by ffprobe."
   (unless elfeed-time-ffprobe-format-cache
-    (setf elfeed-time-ffprobe-format-cache
-	  (split-string (shell-command-to-string
-			 (format "%s %s | %s | %s"
-				 elfeed-time-ffprobe-program-name
-				 "-hide_banner -demuxers"
-				 ;; skip section header
-				 "sed -e '1,/--/d'"
-				 ;; filter to second column
-				 "awk '{print $2}'"))
-			(rx (any "\n,")) t)))
+    (let ((buffer (generate-new-buffer " *elfeed-time-ffprobe-demuxers*")))
+      (with-current-buffer buffer
+	(call-process elfeed-time-ffprobe-program-name nil
+		      buffer
+		      nil
+		      "-hide_banner" "-demuxers")
+	(goto-char (point-min))
+	;; Skip past header
+	(re-search-forward (rx "--" (* not-newline) "\n") nil t)
+	(while (re-search-forward (rx bol (* " ") "D" (+ space)
+				      (group (+ (not space))) (+ space)
+				      (* not-newline) "\n")
+				  nil t)
+	  (dolist (ext (split-string (match-string 1) (rx ",") t))
+	    (push ext elfeed-time-ffprobe-format-cache)))
+	(kill-buffer))))
   elfeed-time-ffprobe-format-cache)
 
 (defun elfeed-time--ffprobe-enclosure-supported-p (enclosure)
