@@ -137,14 +137,25 @@ be marked as read."
   :type 'string)
 
 (defcustom elfeed-time-ffprobe-arguments
-  '("-hide_banner"
-    "-loglevel error"
-    "-print_format default=noprint_wrappers=1:nokey=1"
-    "-show_entries format=duration")
-  "A list of arguments to pass to ffprobe to get the duration of
-a media file in seconds."
+  (list "-hide_banner"
+	"-loglevel" "error"
+	"-print_format" "default=noprint_wrappers=1:nokey=1"
+	"-show_entries" "format=duration")
+  "A list of arguments for ffprobe to get the length of a file."
   :group 'elfeed-time
   :type '(repeat string))
+
+(defcustom elfeed-time-enclosure-reduce-function #'max
+  "The function to determine the final entry length.
+This function is called like so:
+
+\(`cl-reduce' elfeed-time-enclosure-reduce-function LIST\)
+
+where LIST is a list of the lengths of all supported enclosures.
+LIST is guaranteed to be non-nil."
+  :group 'elfeed-time
+  :type 'function
+  :options '(max +))
 
 (defface elfeed-time-display '((t :inherit (elfeed-search-unread-count-face)))
   "Face for displaying the amount of time it takes to read,
@@ -440,6 +451,23 @@ Call CONTINUATION when finished."
 			(rx (any "\n,")) t)))
   elfeed-time-ffprobe-format-cache)
 
+(defun elfeed-time--ffprobe-enclosure-supported-p (enclosure)
+  "Return ENCLOSURE if it can be demuxed by ffprobe.
+Otherwise, return nil."
+  (when (member (substring (url-file-extension (car enclosure)) 1)
+		(elfeed-time-ffprobe-supported-extensions))
+    enclosure))
+
+(defun elfeed-time--set-enclosure-time (enclosure)
+  "Set the length of ENCLOSURE to the numeric value of BUFFER."
+  (lambda (entry buffer continuation)
+    (with-current-buffer buffer
+      (when-let ((position (cl-position enclosure (elfeed-entry-enclosures entry)
+					:test #'equal)))
+	(setf (nth position (elfeed-meta entry :et-enclosure-times))
+	      (string-to-number (buffer-string)))))
+    (funcall (car continuation) entry (cdr continuation))))
+
 (defun elfeed-time-maybe-get-podcast-info (entry continuation)
   "Get the length of ENTRY if its a podcast.
 Call CONTINUATION when finished."
@@ -447,28 +475,31 @@ Call CONTINUATION when finished."
       (elfeed-time-get-enclosure-time entry continuation)
     (funcall (car continuation) entry (cdr continuation))))
 
-;;; TODO make async
 (defun elfeed-time-get-enclosure-time (entry &optional continuation)
   "Store the length of the longest enclosure of ENTRY in ENTRY's meta plist.
 Call CONTINUATION when finished."
-  (interactive (list (elfeed-time-current-entries nil) nil))
+  (interactive (list (elfeed-time-current-entries nil)))
   (setf continuation (or continuation (list #'ignore)))
-  (when-let ((enclosures (seq-filter (lambda (url)
-				       (member (substring (url-file-extension url) 1)
-
-					       (elfeed-time-ffprobe-supported-extensions)))
-				     (mapcar #'car (elfeed-entry-enclosures entry)))))
-    (setf (elfeed-meta entry :et-length-in-seconds)
-	  (cl-loop for url in enclosures
-		   maximizing (cl-parse-integer
-			       (shell-command-to-string
-				(mapconcat #'identity
-					   (cl-list* elfeed-time-ffprobe-program-name
-						     (concat "\"" url "\"")
-						     elfeed-time-ffprobe-arguments)
-					   " "))
-			       :junk-allowed t))))
-  (funcall (car continuation) entry (cdr continuation)))
+  (let ((enclosures (mapcar #'elfeed-time--ffprobe-enclosure-supported-p
+			    (elfeed-entry-enclosures entry))))
+    (when (cl-some #'identity enclosures)
+      (setf (elfeed-meta entry :et-enclosure-times)
+	    (make-list (length enclosures) nil))
+      (dolist (enclosure enclosures)
+	(when enclosure
+	  (push (lambda (lambda-entry lambda-continuation)
+		  (make-process :name "elfeed-time-get-enclosure-time"
+				:buffer " *elfeed-time-get-enclosure-time*"
+				:command (cl-list* elfeed-time-ffprobe-program-name
+						   (car enclosure)
+						   elfeed-time-ffprobe-arguments)
+				:noquery t
+				:connection-type 'pipe
+				:sentinel (elfeed-time--process-sentinel
+					   (elfeed-time--set-enclosure-time enclosure)
+					   lambda-entry lambda-continuation)))
+		continuation))))
+    (funcall (car continuation) entry (cdr continuation))))
 
 (defun elfeed-time-curl-args (url &optional headers method data)
   "Build an argument list for curl for URL.
@@ -708,9 +739,10 @@ non-zero, then return SECONDS unchanged."
 
 (defun elfeed-time-podcast-time (entry)
   "Return the length of ENTRY as a podcast in seconds."
-  (let ((length (elfeed-meta entry :et-length-in-seconds)))
-    (when (numberp length)
-      (elfeed-time-scale-entry-time entry length))))
+  (when-let ((all-enclosures (elfeed-meta entry :et-enclosure-times))
+	     (enclosures (cl-remove-if-not #'numberp all-enclosures))
+	     (length (cl-reduce elfeed-time-enclosure-reduce-function enclosures)))
+    (elfeed-time-scale-entry-time entry length)))
 
 (defun elfeed-time-text-time (entry)
   "Return the length of ENTRY as derived from it's word count."
