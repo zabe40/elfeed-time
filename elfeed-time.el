@@ -23,7 +23,17 @@
 
 ;;; Commentary:
 
+;; elfeed-time displays the approximate time it will take to read,
+;; watch, or listen to an elfeed entry. It can display this
+;; information in both elfeed-search-mode, and elfeed-show-mode.
 ;;
+;; elfeed-time can measure the length of:
+;; * Youtube videos
+;; * Youtube premieres
+;; * podcasts
+;; * and of course text (including feeds that only give a preview)
+;;
+;; For more information about elfeed-time, see README.org
 
 ;;; Code:
 
