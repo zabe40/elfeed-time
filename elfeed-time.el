@@ -1,6 +1,6 @@
 ;;; elfeed-time.el --- Display an entry's length in elfeed -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2021  zabe
+;; Copyright (C) 2021,2022 zabe
 
 ;; Author: zabe <zabe@disroot.org>
 ;; URL: https://github.com/zabe40/elfeed-time
