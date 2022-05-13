@@ -157,11 +157,7 @@ LIST is guaranteed to be non-nil."
   :type 'function
   :options '(max +))
 
-(defface elfeed-time-display '((t :inherit (elfeed-search-unread-count-face)))
-  "Face for displaying the amount of time it takes to read,
-  watch, or listen to an entry.")
-
-(defvar elfeed-time-new-entry-functions nil
+(defcustom elfeed-time-new-entry-functions nil
   "A list of functions to run asynchronously on new entries.
 The functions in this hook are called with two arguments, an
 ENTRY, and a CONTINUATION.
@@ -174,9 +170,17 @@ Functions in this hook will not be called with a value of nil for
 CONTINUATION (but may want to handle that case anyways).
 
 This hook is intended as a place to put computations that might
-take a long time, including network requests, etc.")
+take a long time, including network requests, etc."
+  :group 'elfeed-time
+  :type 'hook
+  :options '(elfeed-time-maybe-get-video-info
+	     elfeed-time-maybe-get-premiere-info
+	     elfeed-time-maybe-get-podcast-info
+	     elfeed-time-maybe-get-full-content
+	     elfeed-time-maybe-make-entry-readable
+	     elfeed-time-count-entry-words))
 
-(defvar elfeed-time-entry-time-functions nil
+(defcustom elfeed-time-entry-time-functions nil
   "A list of functions to call to compute an entry's time.
 Functions are called in order with one argument, ENTRY, the
 elfeed-entry they should compute the time of. Each function
@@ -188,7 +192,17 @@ indicate that ENTRY respresents an event in the future.
 This hook is intended to be called within
 `elfeed-search-sort-function' (which runs every keystroke in live
 search), so functions in this hook should complete quickly,
-especially if returning nil.")
+especially if returning nil."
+  :group 'elfeed-time
+  :type 'hook
+  :options '(elfeed-time-video-time
+	     elfeed-time-premiere-time
+	     elfeed-time-podcast-time
+	     elfeed-time-text-time))
+
+(defface elfeed-time-display '((t :inherit (elfeed-search-unread-count-face)))
+  "Face for displaying the amount of time it takes to read,
+  watch, or listen to an entry.")
 
 (defvar-local elfeed-time-preprocess-function nil
   "A function called to transform an entry's content before it is displayed.")
