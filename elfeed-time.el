@@ -497,7 +497,8 @@ Otherwise, return nil."
       (when-let ((position (cl-position enclosure (elfeed-entry-enclosures entry)
 					:test #'equal)))
 	(setf (nth position (elfeed-meta entry :et-enclosure-times))
-	      (string-to-number (buffer-string)))))
+	      (string-to-number (buffer-string))))
+      (kill-buffer))
     (funcall (car continuation) entry (cdr continuation))))
 
 (defun elfeed-time-maybe-get-podcast-info (entry continuation)
