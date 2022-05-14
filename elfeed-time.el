@@ -522,7 +522,9 @@ Call CONTINUATION when finished."
 	(when enclosure
 	  (push (lambda (lambda-entry lambda-continuation)
 		  (make-process :name "elfeed-time-get-enclosure-time"
-				:buffer " *elfeed-time-get-enclosure-time*"
+				:buffer (generate-new-buffer
+					 (format " *elfeed-time-get-enclosure-time*: %s"
+						 (elfeed-entry-link lambda-entry)))
 				:command (cl-list* elfeed-time-ffprobe-program-name
 						   (car enclosure)
 						   elfeed-time-ffprobe-arguments)
