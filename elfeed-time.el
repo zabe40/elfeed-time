@@ -347,7 +347,7 @@ CONTINUATION as arguments."
 (defun elfeed-time-maybe-get-video-info (entry continuation)
   "Get ENTRY's length as a video if it is one.
 Call CONTINUATION when finished."
-  (if (member elfeed-time-video-tag (elfeed-entry-tags entry))
+  (if (elfeed-tagged-p elfeed-time-video-tag entry)
       (elfeed-time-get-video-info entry continuation)
     (funcall (car continuation) entry (cdr continuation))))
 
@@ -431,7 +431,7 @@ Call CONTINUATION when finished."
 (defun elfeed-time-maybe-get-premiere-info (entry continuation)
   "Get info for ENTRY only if it is a premiere.
 Call CONTINUATION when finished."
-  (if (member elfeed-time-premiere-tag (elfeed-entry-tags entry))
+  (if (elfeed-tagged-p elfeed-time-premiere-tag entry)
       (elfeed-time-get-premiere-info entry continuation)
     (funcall (car continuation) entry (cdr continuation))))
 
@@ -504,7 +504,7 @@ Otherwise, return nil."
 (defun elfeed-time-maybe-get-podcast-info (entry continuation)
   "Get the length of ENTRY if its a podcast.
 Call CONTINUATION when finished."
-  (if (member elfeed-time-podcast-tag (elfeed-entry-tags entry))
+  (if (elfeed-tagged-p elfeed-time-podcast-tag entry)
       (elfeed-time-get-enclosure-time entry continuation)
     (funcall (car continuation) entry (cdr continuation))))
 
@@ -580,7 +580,7 @@ Adapted from `elfeed-curl--args'"
 (defun elfeed-time-maybe-get-full-content (entry continuation)
   "Get full content for ENTRY if it gives only a preview.
 Call CONTINUATION when finished."
-  (if (member elfeed-time-preview-tag (elfeed-entry-tags entry))
+  (if (elfeed-tagged-p elfeed-time-preview-tag entry)
       (elfeed-time-get-full-content entry continuation)
     (funcall (car continuation) entry (cdr continuation))))
 
@@ -632,7 +632,7 @@ Adapted from `eww-readable'"
 (defun elfeed-time-maybe-make-entry-readable (entry continuation)
   "Make ENTRY readable if it is unreadable.
 Call CONTINUATION when finished."
-  (if (member elfeed-time-unreadable-tag (elfeed-entry-tags entry))
+  (if (elfeed-tagged-p elfeed-time-unreadable-tag entry)
       (elfeed-time-make-entry-readable entry continuation)
     (funcall (car continuation) entry (cdr continuation))))
 
