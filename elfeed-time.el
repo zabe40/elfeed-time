@@ -945,6 +945,50 @@ ENTRY must represent a premiere."
 				     time))
       (user-error "%s is not a premiere" title))))
 
+(defun elfeed-time-sum-entry-times (entries &optional include-premieres-p)
+  "Return the total time it would take to read ENTRIES.
+When INCLUDE-PREMIERES-P is nil don't add premiere times to the
+sum."
+  (cl-loop for entry in entries
+	   when (or include-premieres-p
+		    (not (elfeed-tagged-p elfeed-time-premiere-tag entry)))
+	   sum (elfeed-time-compute-entry-time entry)))
+
+(defun elfeed-time-print-time-sum (entries &optional include-premieres-p)
+  "Print the total time it would take to read ENTRIES.
+ENTRIES defaults to all displayed entries, unless the region is
+active, in which case ENTRIES is the list of selected entries.
+With any non-nil prefix argument include premieres in this sum."
+  (interactive (list (if (use-region-p)
+			 (elfeed-time-current-entries t)
+		       elfeed-search-entries)
+		     current-prefix-arg))
+  (message "%s" (elfeed-time-format-seconds
+		 elfeed-time-format-string
+		 (elfeed-time-sum-entry-times entries
+					      include-premieres-p))))
+
+(defun elfeed-time-header ()
+  "Return a string to be used as the elfeed-search header.
+This function is intended for use in
+`elfeed-search-header-function'.
+
+Adapted from `elfeed-search--header'."
+  (concat (cond
+	   ((or (null elfeed-search-entries)
+		(zerop (elfeed-db-last-update))
+		(> (elfeed-queue-count-total) 0))
+	    "")
+	   ((and elfeed-search-filter-active
+		 elfeed-search-filter-overflowing)
+	    "??:?? ")
+	   (t
+	    (concat (elfeed-time-format-seconds
+		     elfeed-time-format-string
+		     (elfeed-time-sum-entry-times elfeed-search-entries))
+		    " ")))
+	  (elfeed-search--header)))
+
 (defun elfeed-time--set-sort-function (function)
   "Sort the elfeed-search buffer according to FUNCTION immediately."
   (setf elfeed-search-sort-function function)
