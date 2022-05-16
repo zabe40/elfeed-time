@@ -214,6 +214,9 @@ especially if returning nil."
   "Face for displaying the amount of time it takes to read,
   watch, or listen to an entry.")
 
+(defface elfeed-time-sum '((t :inherit (elfeed-search-unread-count-face)))
+  "Face for displaying the sum of times of entries.")
+
 (defvar-local elfeed-time-preprocess-function nil
   "A function called to transform an entry's content before it is displayed.")
 
@@ -974,19 +977,21 @@ This function is intended for use in
 `elfeed-search-header-function'.
 
 Adapted from `elfeed-search--header'."
-  (concat (cond
-	   ((or (null elfeed-search-entries)
-		(zerop (elfeed-db-last-update))
-		(> (elfeed-queue-count-total) 0))
-	    "")
-	   ((and elfeed-search-filter-active
-		 elfeed-search-filter-overflowing)
-	    "??:?? ")
-	   (t
-	    (concat (elfeed-time-format-seconds
-		     elfeed-time-format-string
-		     (elfeed-time-sum-entry-times elfeed-search-entries))
-		    " ")))
+  (format "%s%s"
+	  (propertize (cond ((or (null elfeed-search-entries)
+				 (zerop (elfeed-db-last-update))
+				 (> (elfeed-queue-count-total) 0))
+			     "")
+			    ((and elfeed-search-filter-active
+				  elfeed-search-filter-overflowing)
+			     "??:?? ")
+			    (t
+			     (concat (elfeed-time-format-seconds
+				      elfeed-time-format-string
+				      (elfeed-time-sum-entry-times
+				       elfeed-search-entries))
+				     " ")))
+		      'face 'elfeed-time-sum)
 	  (elfeed-search--header)))
 
 (defun elfeed-time--set-sort-function (function)
