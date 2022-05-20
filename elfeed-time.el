@@ -302,10 +302,10 @@ otherwise, return the primary selected entry."
 (defun elfeed-time-log (level entry format &rest objects)
   "Write log message FORMAT at LEVEL about ENTRY to elfeed's log buffer.
 FORMAT must be a string suitable for `format' given OBJECTS as arguments."
-  (elfeed-log level
-	      (concat "elfeed-time [%s]: " format)
-	      (cons (elfeed-entry-link entry)
-		    objects)))
+  (apply 'elfeed-log level
+	 (concat "elfeed-time [%s]: " format)
+	 (cons (elfeed-entry-link entry)
+	       objects)))
 
 (defun elfeed-time--process-sentinel (fun entry continuation)
   "Return a sentinel function suitable for `make-process'.
