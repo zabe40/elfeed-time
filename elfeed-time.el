@@ -989,7 +989,9 @@ Adapted from `elfeed-search--header'."
 			     (concat (elfeed-time-format-seconds
 				      elfeed-time-format-string
 				      (elfeed-time-sum-entry-times
-				       elfeed-search-entries))
+				       (if (use-region-p)
+					   (elfeed-search-selected nil)
+					 elfeed-search-entries)))
 				     " ")))
 		      'face 'elfeed-time-sum)
 	  (elfeed-search--header)))
