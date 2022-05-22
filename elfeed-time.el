@@ -991,7 +991,11 @@ Adapted from `elfeed-search--header'."
 				      (elfeed-time-sum-entry-times
 				       (if (use-region-p)
 					   (elfeed-search-selected nil)
-					 elfeed-search-entries)))
+					 (cl-loop for entry in elfeed-search-entries
+						  when (catch 'elfeed-db-done
+							 (elfeed-search-filter
+							  (elfeed-search-parse-filter elfeed-search-filter) entry (elfeed-entry-feed entry)))
+						  collect entry))))
 				     " ")))
 		      'face 'elfeed-time-sum)
 	  (elfeed-search--header)))
