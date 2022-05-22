@@ -38,6 +38,7 @@
 ;;; Code:
 
 (require 'elfeed)
+(require 'xml-query)
 (require 'dom)
 (require 'shr)
 (require 'cl-lib)
@@ -340,6 +341,14 @@ CONTINUATION as arguments."
       (unless error-p
 	(funcall fun entry (current-buffer) continuation)))))
 
+(defun elfeed-time-parse-youtube-description (type xml entry)
+  "Parse XML of ENTRY to get it's description.
+Only TYPEs of :atom are supported for now."
+  (when (string-match (rx "youtube.com") (elfeed-entry-link entry))
+    (cl-case type
+      (:atom (setf (elfeed-meta entry :et-content)
+		   (elfeed-ref (xml-query '(group description *) xml)))))))
+
 (cl-defun elfeed-time-youtube-dl-args (&optional (program elfeed-time-youtube-dl-program))
   "Return a list of arguments to pass to `elfeed-time-youtube-dl-program'."
   (append (alist-get t elfeed-time-youtube-dl-args)
@@ -404,8 +413,8 @@ Call CONTINUATION when finished."
 			 (while (re-search-forward (rx bol "WARNING: " (group (+ not-newline)) eol) nil t)
 			   (elfeed-time-log 'warn entry "%s" (match-string 1)))
 			 (let ((video-data (json-parse-buffer)))
-			   (setf (elfeed-meta entry :et-length-in-seconds) (gethash "duration" video-data)
-				 (elfeed-meta entry :et-content) (elfeed-ref (gethash "description" video-data)))))
+			   (setf (elfeed-meta entry :et-length-in-seconds)
+				 (gethash "duration" video-data))))
 			(_ (throw 'unknown-error nil)))
 		      (kill-buffer (process-buffer process))
 		      (funcall (car continuation) entry (cdr continuation)))))))
@@ -423,11 +432,6 @@ Call CONTINUATION when finished."
 	    (time-convert (encode-time (iso8601-parse
 					(match-string 1)))
 			  'integer)))
-    (goto-char (point-min))
-    (when (re-search-forward (rx "<meta " (or "name" "itemprop") "=\"description\" "
-				 "content=\"" (group (1+ (not "\""))) "\""))
-      (setf (elfeed-meta entry :et-content)
-	    (match-string 1)))
     (kill-buffer buffer))
   (funcall (car continuation) entry (cdr continuation)))
 

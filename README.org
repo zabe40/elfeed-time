@@ -39,6 +39,8 @@ For example, if you don't subscribe to any podcasts with elfeed, you won't need 
 	    (elfeed-make-tagger :feed-url (rx "youtube.com")
 				:add '(video)))
 
+  (add-hook 'elfeed-new-entry-parse-hook #'elfeed-time-parse-youtube-description)
+
   (add-hook elfeed-time-new-entry-functions #'elfeed-time-maybe-get-video-info 10)
   (add-hook elfeed-time-new-entry-functions #'elfeed-time-maybe-get-premiere-info 20)
   (add-hook elfeed-time-new-entry-functions #'elfeed-time-maybe-get-podcast-info 30)
