@@ -1023,6 +1023,13 @@ Adapted from `elfeed-search--header'."
 			    (descending 'ascending)))
   (elfeed-search-update--force))
 
+(defun elfeed-time-run-hooks (entries)
+  "Run `elfeed-new-entry-hook' for all selected ENTRIES."
+  (interactive (list (elfeed-time-current-entries t)))
+  (dolist (entry entries)
+    (run-hook-with-args 'elfeed-new-entry-hook entry)
+    (elfeed-time-update-entry entry)))
+
 (provide 'elfeed-time)
 ;;; elfeed-time.el ends here
 
