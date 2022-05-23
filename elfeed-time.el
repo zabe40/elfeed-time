@@ -139,7 +139,7 @@ This could include headers, footers, advertisements, etc."
 					 ("yt-dlc" . ("--dump-json" "--no-color"))
 					 ("youtube-dl" . ("--dump-json" "--no-color"))
 					 (t . ("-q")))
-  "An alist of associating program names to lists of arguments to pass to them.
+  "An alist associating program names to lists of arguments to pass to them.
 The entry with key t is a list of arguments for all programs."
   :group 'elfeed-time
   :type '(alist :key-type (choice string
