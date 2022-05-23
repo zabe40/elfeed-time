@@ -161,7 +161,7 @@ be marked as read."
   :group 'elfeed-time
   :type 'string)
 
-(defcustom elfeed-time-ffprobe-arguments
+(defcustom elfeed-time-ffprobe-args
   (list "-hide_banner"
 	"-loglevel" "error"
 	"-print_format" "default=noprint_wrappers=1:nokey=1"
@@ -548,7 +548,7 @@ Call CONTINUATION when finished."
 						 (elfeed-entry-link lambda-entry)))
 				:command (cl-list* elfeed-time-ffprobe-program-name
 						   (car enclosure)
-						   elfeed-time-ffprobe-arguments)
+						   elfeed-time-ffprobe-args)
 				:noquery t
 				:connection-type 'pipe
 				:sentinel (elfeed-time--process-sentinel
