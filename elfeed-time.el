@@ -75,6 +75,16 @@ For information on possible specifiers, see `format-seconds'."
   :group 'elfeed-time
   :type 'string)
 
+(defcustom elfeed-time-max-format-seconds (* 1 60 60 24 30)
+  "The maximum number of seconds the longest entry is expected to be.
+This also means the longest a premiere is expected to be
+announced in advance. This variable is used to control the width
+of the time column in combination
+with`elfeed-time-format-seconds-max-length' in
+`elfeed-time-search-print-entry'."
+  :group 'elfeed-time
+  :type 'number)
+
 (defcustom elfeed-time-premiere-date-format-string "%Y-%m-%d at %X"
   "The format control string to display the date and time of premieres.
 For information on possible specifiers, see
@@ -856,7 +866,7 @@ Use MAX-SECONDS as the largest time to expect."
 	 (time (elfeed-format-column (elfeed-time-format-seconds (concat elfeed-time-format-string " ")
 								 (elfeed-time-compute-entry-time entry))
 				     (1+ (elfeed-time-format-seconds-max-length elfeed-time-format-string
-										(* 1 60 60 24 30)))
+										elfeed-time-max-format-seconds))
 				     :right)))
     (insert (propertize date 'face 'elfeed-search-date-face) " ")
     ;; The faces are reversed so that faces earlier in
