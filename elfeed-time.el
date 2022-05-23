@@ -52,7 +52,11 @@
 (defcustom elfeed-time-reading-speed 200
   "The user's reading speed, in words per minute. Must not be 0."
   :group 'elfeed-time
-  :type 'number)
+  :type 'number
+  :set (lambda (symbol value)
+	 (if (zerop value)
+	     (user-error "%S must not be zero" symbol)
+	   (set symbol value))))
 
 (defcustom elfeed-time-speed-multiplier nil
   "The default speed multiplier for videos and podcasts. Must not be 0.
