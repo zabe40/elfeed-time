@@ -30,7 +30,7 @@ This advice is needed because elfeed doesn't currently have a way to tell it's g
 #+begin_src elisp
   (setf elfeed-show-refresh-function elfeed-time-refresh-mail-style-function)
   (setf elfeed-search-print-entry-function #'elfeed-time-search-print-entry)
-  (add-hook elfeed-new-entry-hook #'elfeed-time-new-entry 80)
+  (add-hook 'elfeed-new-entry-hook #'elfeed-time-new-entry 80)
 #+end_src
 *** Add what you need
 For example, if you don't subscribe to any podcasts with elfeed, you won't need to add ~elfeed-time-maybe-get-podcast-info~ to ~elfeed-time-new-entry-functions~.
