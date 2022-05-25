@@ -364,7 +364,8 @@ Only TYPEs of :atom are supported for now."
 		   (elfeed-ref (xml-query '(group description *) xml)))))))
 
 (cl-defun elfeed-time-youtube-dl-args (&optional (program elfeed-time-youtube-dl-program))
-  "Return a list of arguments to pass to `elfeed-time-youtube-dl-program'."
+  "Return a list of arguments to pass to PROGRAM.
+PROGRAM defaults to `elfeed-time-youtube-dl-program'."
   (append (alist-get t elfeed-time-youtube-dl-args)
 	  (alist-get (file-name-base program)
 		     elfeed-time-youtube-dl-args
