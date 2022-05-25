@@ -763,7 +763,7 @@ DEFAULT is as in `read-number'."
 					speed))))))
 		 (list (gethash (completing-read
 				 "Feed: " elfeed-db-feeds
-				 (lambda (key value)
+				 (lambda (_key value)
 				   (let ((speed (elfeed-meta
 						 value :et-speed-multiplier)))
 				     (and speed (not (equal 1 speed)))))
