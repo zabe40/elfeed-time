@@ -41,17 +41,17 @@ For example, if you don't subscribe to any podcasts with elfeed, you won't need 
 
   (add-hook 'elfeed-new-entry-parse-hook #'elfeed-time-parse-youtube-description)
 
-  (add-hook elfeed-time-new-entry-functions #'elfeed-time-maybe-get-video-info 10)
-  (add-hook elfeed-time-new-entry-functions #'elfeed-time-maybe-get-premiere-info 20)
-  (add-hook elfeed-time-new-entry-functions #'elfeed-time-maybe-get-podcast-info 30)
-  (add-hook elfeed-time-new-entry-functions #'elfeed-time-maybe-get-full-content 40)
-  (add-hook elfeed-time-new-entry-functions #'elfeed-time-maybe-make-entry-readable 50)
-  (add-hook elfeed-time-new-entry-functions #'elfeed-time-count-entry-words 60)
+  (add-hook 'elfeed-time-new-entry-functions #'elfeed-time-maybe-get-video-info 10)
+  (add-hook 'elfeed-time-new-entry-functions #'elfeed-time-maybe-get-premiere-info 20)
+  (add-hook 'elfeed-time-new-entry-functions #'elfeed-time-maybe-get-podcast-info 30)
+  (add-hook 'elfeed-time-new-entry-functions #'elfeed-time-maybe-get-full-content 40)
+  (add-hook 'elfeed-time-new-entry-functions #'elfeed-time-maybe-make-entry-readable 50)
+  (add-hook 'elfeed-time-new-entry-functions #'elfeed-time-count-entry-words 60)
 
-  (add-hook elfeed-time-entry-time-functions #'elfeed-time-video-time 10)
-  (add-hook elfeed-time-entry-time-functions #'elfeed-time-premiere-time 20)
-  (add-hook elfeed-time-entry-time-functions #'elfeed-time-podcast-time 30)
-  (add-hook elfeed-time-entry-time-functions #'elfeed-time-text-time 40)
+  (add-hook 'elfeed-time-entry-time-functions #'elfeed-time-video-time 10)
+  (add-hook 'elfeed-time-entry-time-functions #'elfeed-time-premiere-time 20)
+  (add-hook 'elfeed-time-entry-time-functions #'elfeed-time-podcast-time 30)
+  (add-hook 'elfeed-time-entry-time-functions #'elfeed-time-text-time 40)
 #+end_src
 *** Preferences
 #+begin_src elisp
