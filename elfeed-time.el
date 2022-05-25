@@ -39,6 +39,8 @@
 
 (require 'elfeed)
 (require 'xml-query)
+(require 'url-parse)
+(require 'url-util)
 (require 'dom)
 (require 'shr)
 (require 'cl-lib)
@@ -146,6 +148,36 @@ The entry with key t is a list of arguments for all programs."
 				  (const :tag "Arguments for all programs" t))
 		:value-type (repeat string)))
 
+(defcustom elfeed-time-youtube-description-link-regexp-alist
+  (list (cons (rx bow "http" (opt "s") "://" (+ (not whitespace)))
+	      #'elfeed-time-youtube-url-link)
+	(cons (rx bow (opt (group (** 1 2 digit)) ":")
+		  (group (** 1 2 digit)) ":"
+		  (group digit digit))
+	      #'elfeed-time-youtube-timestamp-link)
+	;; A known issue is that youtube hashtags cannot be solely
+	;; numeric AND less than two characters long but this regexp
+	;; matches those invalid hashtags. I think we might need
+	;; something stronger than a regular expression to properly
+	;; parse these, but since an easy workaround is simply to
+	;; avoid clicking the invalid hashtags, I'm fine with leaving
+	;; this as is.
+	(cons (rx "#" (group (+ (not whitespace))))
+	      #'elfeed-time-youtube-hashtag-link)
+	;; Similarly, this regexp is also over-eager, and matches
+	;; handles that aren't existing youtube channel names. I don't
+	;; see a way to fix this without a network request, which I'm
+	;; loathe to add to anything but `elfeed-new-entry-hook'.
+	(cons (rx "@" (group (+ (not whitespace))))
+	      #'elfeed-time-youtube-channel-link))
+  "An alist associating regexps to functions to return a URL for the matched regexp.
+The functions are called with two arguments, the STRING that was
+matched, and the ENTRY the description belongs to. Functions can
+also access the results of the regexp match using `match-string'
+and the like."
+  :group 'elfeed-time
+  :type '(alist :key-type regexp :value-type function))
+
 (defcustom elfeed-time-ignore-private-videos nil
   "Whether or not to ignore private youtube videos.
 This can be t, nil, or a function which is called with the entry
@@ -225,15 +257,20 @@ especially if returning nil."
 	     elfeed-time-podcast-time
 	     elfeed-time-text-time))
 
+(defcustom elfeed-time-preprocess-functions nil
+  "A list of functions called to transform an entry's content display.
+Each function is called with arguments ENTRY, CONTENT,
+CONTENT-TYPE, and BASE-URL. It should return a list of CONTENT,
+CONTENT-TYPE, and BASE-URL, altered as desired."
+  :group 'elfeed-time
+  :type 'hook)
+
 (defface elfeed-time-display '((t :inherit (elfeed-search-unread-count-face)))
   "Face for displaying the amount of time it takes to read,
 watch, or listen to an entry.")
 
 (defface elfeed-time-sum '((t :inherit (elfeed-search-unread-count-face)))
   "Face for displaying the sum of times of entries.")
-
-(defvar-local elfeed-time-preprocess-function nil
-  "A function called to transform an entry's content before it is displayed.")
 
 (defvar elfeed-time-ffprobe-format-cache ()
   "A list of file/url extensions supported by ffprobe.")
@@ -360,8 +397,8 @@ CONTINUATION as arguments."
 Only TYPEs of :atom are supported for now."
   (when (string-match (rx "youtube.com") (elfeed-entry-link entry))
     (cl-case type
-      (:atom (setf (elfeed-meta entry :et-content)
-		   (elfeed-ref (xml-query '(group description *) xml)))))))
+      (:atom (setf (elfeed-meta entry :et-content) (elfeed-ref (xml-query '(group description *) xml))
+		   (elfeed-meta entry :et-content-type) 'youtube-description-markup)))))
 
 (cl-defun elfeed-time-youtube-dl-args (&optional (program elfeed-time-youtube-dl-program))
   "Return a list of arguments to pass to PROGRAM.
@@ -882,10 +919,94 @@ Use MAX-SECONDS as the largest time to expect."
     (when tags
       (insert "(" tags-str ")"))))
 
-(defun elfeed-time-preprocess-content-readable (content content-type base)
-  (if (eq content-type 'html)
-      (elfeed-time-make-html-readable content base)
-    content))
+(defun elfeed-time-preprocess-content-readable (_entry content content-type base)
+  "Return the readable version of CONTENT, if CONTENT-TYPE is html.
+Don't change CONTENT-TYPE or BASE."
+  (list (if (eq content-type 'html)
+	    (elfeed-time-make-html-readable content base)
+	  content)
+	content-type base))
+
+(defun elfeed-time-youtube-hashtag-link (string _entry)
+  "Return a link to the hashtag matched in STRING."
+  (format "https://www.youtube.com/hashtag/%s"
+	  (downcase (match-string 1 string))))
+
+(defun elfeed-time-youtube-url-link (string _entry)
+  "Return the link matched in STRING."
+  (match-string 0 string))
+
+(defun elfeed-time-youtube-timestamp-link (string entry)
+  "Return the URL to ENTRY starting at the timestamp matched in STRING."
+  (let* ((seconds 0)
+	 (urlobj (save-match-data (url-generic-parse-url (elfeed-entry-link entry))))
+	 (path-query (save-match-data (url-path-and-query urlobj)))
+	 (path (car path-query))
+	 (query (cdr path-query))
+	 (parsed-query (save-match-data (url-parse-query-string query)))
+	 (new-query))
+    (when-let ((hours (match-string 1 string)))
+      (cl-incf seconds (* 60 60 (string-to-number hours))))
+    (cl-incf seconds (* 60 (string-to-number (match-string 2 string))))
+    (cl-incf seconds (string-to-number (match-string 3 string)))
+    (setf new-query
+	  (url-build-query-string (cons (list 't (number-to-string seconds))
+		 parsed-query)))
+    (setf (url-filename urlobj) (concat path "?" new-query))
+    (url-recreate-url urlobj)))
+
+(defun elfeed-time-youtube-channel-link (string _entry)
+  "Return the URL to the channel name matched in STRING.
+Since there isn't an easy way to map channel names to channel
+URLs, we make do by returning a search for the channel name."
+  (format "https://www.youtube.com/results?%s"
+	  (url-build-query-string `((search_query ,(match-string 1 string))))))
+
+(defun elfeed-time--dom-regexp-replace-link (dom regexp function entry)
+  "Replace strings in DOM matching REGEXP with links to the result of FUNCTION.
+ENTRY is passed to FUNCTION, along with the matched string."
+  (apply #'dom-node (dom-tag dom) (dom-attributes dom)
+	 (let ((children))
+	   (cl-loop for child in (dom-children dom)
+		    do (if (stringp child)
+			   (progn (while (string-match regexp child)
+				    (push (substring child 0 (match-beginning 0)) children)
+				    (push (dom-node 'a `((href . ,(save-match-data
+								    (funcall function child entry))))
+						    (match-string 0 child))
+					  children)
+				    (setf child (substring child (match-end 0) nil)))
+				  (push child children))
+			 (if (eq (dom-tag child) 'a)
+			     (push child children)
+			   (push (elfeed-time--dom-regexp-replace-link
+				  child regexp function entry)
+				 children))))
+	   (nreverse children))))
+
+(defun elfeed-time-preprocess-youtube-description (entry content content-type base)
+  "Turn a youtube description CONTENT into HTML.
+ENTRY is used for timestamp links."
+  (if (eq content-type 'youtube-description-markup)
+      (list (with-temp-buffer
+	      (insert content)
+	      (goto-char (point-min))
+	      (while (re-search-forward (rx "\n") nil t)
+		(replace-match "<br>" t t))
+	      (goto-char (point-min))
+	      (insert "<!DOCTYPE html><html><body><p>")
+	      (goto-char (point-max))
+	      (insert "</p></body></html>")
+	      (let ((dom (libxml-parse-html-region (point-min) (point-max))))
+		(pcase-dolist (`(,regexp . ,function)
+			       elfeed-time-youtube-description-link-regexp-alist)
+		  (setf dom (elfeed-time--dom-regexp-replace-link
+			     dom regexp function entry)))
+		(erase-buffer)
+		(shr-dom-print dom)
+		(buffer-string)))
+	    'html base)
+    (list content content-type base)))
 
 (defun elfeed-time-refresh-mail-style-function ()
   "Update the buffer to match the selected entry, using a mail-style.
@@ -943,8 +1064,12 @@ Adapted from `elfeed-show-refresh--mail-style'"
 	     do (insert "\n"))
     (insert "\n")
     (if content
-	(progn (when elfeed-time-preprocess-function
-		 (setf content (funcall elfeed-time-preprocess-function content type base)))
+	(progn (dolist (fun elfeed-time-preprocess-functions)
+		 (pcase-let ((`(,lexi-content ,lexi-type ,lexi-base)
+			      (funcall fun elfeed-show-entry content type base)))
+		   (setf content lexi-content
+			 type lexi-type
+			 base lexi-base)))
 	       (if (eq type 'html)
 		   (elfeed-insert-html content base)
 		 (insert content)))

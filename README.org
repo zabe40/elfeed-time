@@ -52,6 +52,8 @@ For example, if you don't subscribe to any podcasts with elfeed, you won't need 
   (add-hook 'elfeed-time-entry-time-functions #'elfeed-time-premiere-time 20)
   (add-hook 'elfeed-time-entry-time-functions #'elfeed-time-podcast-time 30)
   (add-hook 'elfeed-time-entry-time-functions #'elfeed-time-text-time 40)
+
+  (add-hook 'elfeed-time-preprocess-functions #'elfeed-time-preprocess-youtube-description -10)
 #+end_src
 *** Preferences
 #+begin_src elisp
