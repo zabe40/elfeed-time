@@ -227,7 +227,7 @@ especially if returning nil."
 
 (defface elfeed-time-display '((t :inherit (elfeed-search-unread-count-face)))
   "Face for displaying the amount of time it takes to read,
-  watch, or listen to an entry.")
+watch, or listen to an entry.")
 
 (defface elfeed-time-sum '((t :inherit (elfeed-search-unread-count-face)))
   "Face for displaying the sum of times of entries.")
