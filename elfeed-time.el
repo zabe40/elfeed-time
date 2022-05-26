@@ -791,7 +791,6 @@ DEFAULT is as in `read-number'."
 (defun elfeed-time-reset-feed-speed (feed)
   "Reset FEED's speed-multiplier to 1."
   (interactive (let ((completion-extra-properties
-		      ;; TODO use :affixation function in emacs 28
 		      (list :annotation-function
 			    (lambda (feed-url)
 			      (when-let ((feed (gethash feed-url elfeed-db-feeds))
@@ -800,7 +799,15 @@ DEFAULT is as in `read-number'."
 				(format " %s %s"
 					(or (elfeed-meta feed :title)
 					    (elfeed-feed-title feed))
-					speed))))))
+					speed)))
+			    :affixation-function
+			    (lambda (completions)
+			      (cl-loop for completion in completions
+				       collect (let ((feed (gethash completion elfeed-db-feeds)))
+						 (list completion
+						       (format "%4s " (or (elfeed-meta feed :et-speed-multiplier) ""))
+						       (format " %s" (or (elfeed-meta feed :title)
+									 (elfeed-feed-title feed))))))))))
 		 (list (gethash (completing-read
 				 "Feed: " elfeed-db-feeds
 				 (lambda (_key value)
