@@ -340,16 +340,16 @@ otherwise, return the primary selected entry."
 	(elfeed-show-refresh)))))
 
 (defun elfeed-time-update-feed (feed)
-  "Update all elfeed buffers displaying an entry from FEED."
+  "Update some buffers displaying an entry from FEED.
+If the current buffer is in `elfeed-show-mode' and displaying an
+entry from feed, update it as well."
   (with-current-buffer (elfeed-search-buffer)
     (dolist (entry elfeed-search-entries)
       (when (equal feed (elfeed-entry-feed entry))
 	(elfeed-search-update-entry entry))))
-  (dolist (buffer (buffer-list))
-    (with-current-buffer buffer
-      (when (and (derived-mode-p 'elfeed-show-mode)
-		 (equal feed (elfeed-entry-feed elfeed-show-entry)))
-	(elfeed-show-refresh)))))
+  (when (and (derived-mode-p 'elfeed-show-mode)
+	     (equal feed (elfeed-entry-feed elfeed-show-entry)))
+    (elfeed-show-refresh)))
 
 (defun elfeed-time-log (level entry format &rest objects)
   "Write log message FORMAT at LEVEL about ENTRY to elfeed's log buffer.
