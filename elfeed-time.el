@@ -684,8 +684,10 @@ Adapted from `eww-readable'"
 		 (libxml-parse-html-region (point-min) (point-max)))))
       (eww-score-readability dom)
       (with-temp-buffer
-	(shr-dom-print (list 'base (list (cons 'href base))
-			     (eww-highest-readability dom)))
+	(setf dom (eww-highest-readability dom))
+	(unless (eq (car dom) 'base)
+	  (setf dom (list 'base (list (cons 'href base)) dom)))
+	(shr-dom-print dom)
 	(buffer-string)))))
 
 (defun elfeed-time-maybe-make-entry-readable (entry continuation)
@@ -1064,12 +1066,15 @@ Adapted from `elfeed-show-refresh--mail-style'"
 	     do (insert "\n"))
     (insert "\n")
     (if content
-	(progn (dolist (fun elfeed-time-preprocess-functions)
-		 (pcase-let ((`(,lexi-content ,lexi-type ,lexi-base)
-			      (funcall fun elfeed-show-entry content type base)))
-		   (setf content lexi-content
-			 type lexi-type
-			 base lexi-base)))
+	(progn (run-hook-wrapped
+		'elfeed-time-preprocess-functions
+		(lambda (fun)
+		  (pcase-let ((`(,lexi-content ,lexi-type ,lexi-base)
+			       (funcall fun elfeed-show-entry content type base)))
+		    (setf content lexi-content
+			  type lexi-type
+			  base lexi-base))
+		  nil))
 	       (if (eq type 'html)
 		   (elfeed-insert-html content base)
 		 (insert content)))
@@ -1091,6 +1096,22 @@ ENTRY must represent a premiere."
 		 (format-time-string elfeed-time-premiere-date-format-string
 				     time))
       (user-error "%s is not a premiere" title))))
+
+(defun elfeed-time-show-toggle-readable ()
+  "Switch between the regular content and a readable version.
+
+Note: This command has no effect if the entry's content has
+already been made readable by `elfeed-time-make-entry-readable'"
+  (interactive)
+  (if (member #'elfeed-time-preprocess-content-readable
+	      elfeed-time-preprocess-functions)
+      (progn (remove-hook 'elfeed-time-preprocess-functions
+			  #'elfeed-time-preprocess-content-readable t)
+	     (message "Readability disabled"))
+    (add-hook 'elfeed-time-preprocess-functions
+	      #'elfeed-time-preprocess-content-readable nil t)
+    (message "Readability enabled"))
+  (elfeed-show-refresh))
 
 (defun elfeed-time-sum-entry-times (entries &optional include-premieres-p)
   "Return the total time it would take to read ENTRIES.
