@@ -287,6 +287,7 @@ Each function must take an elfeed-entry and return a single
 elfeed-ref or a list of them, which will be considered in-use by
 `elfeed-db-gc'.")
 
+;;;###autoload
 (defun elfeed-time-db-gc-trace-meta (&optional stats-p)
   "Clean up unused content from the content database.
 If STATS is true, return the space cleared in bytes."
@@ -320,9 +321,12 @@ If STATS is true, return the space cleared in bytes."
                               when (elfeed-directory-empty-p dir)
                               do (delete-directory dir)))))
 
+;;;###autoload
 (defun elfeed-time-entry-meta-content (entry)
   "Return the elfeed-ref in ENTRY's content meta slot."
   (elfeed-meta entry :et-content))
+
+;;;###autoload
 (add-hook 'elfeed-time-gc-functions #'elfeed-time-entry-meta-content)
 
 (defun elfeed-time-current-entries (multiple-entries-p)
@@ -896,6 +900,7 @@ Use MAX-SECONDS as the largest time to expect."
 ;; TODO account for cjk chars
 ;; see "min-width" display specification in emacs 29
 ;; https://lars.ingebrigtsen.no/2021/11/24/the-most-controversial-change-in-emacs-history/
+;;;###autoload
 (defun elfeed-time-search-print-entry (entry)
   "Print ENTRY to the `elfeed-search-mode' buffer.
 
@@ -1026,6 +1031,7 @@ ENTRY is used for timestamp links."
             'html base)
     (list content content-type base)))
 
+;;;###autoload
 (defun elfeed-time-refresh-mail-style-function ()
   "Update the buffer to match the selected entry, using a mail-style.
 When `elfeed-time-preprocess-function' is non-nil, call it on the

@@ -18,9 +18,6 @@ elfeed-time can measure the length of:
 2. One of: [[https://github.com/yt-dlp/yt-dlp][yt-dlp]], [[https://github.com/ytdl-org/youtube-dl][youtube-dl]], or [[https://github.com/blackjack4494/yt-dlc][yt-dlc]]
 3. [[https://ffmpeg.org/ffprobe.html][ffprobe]]
 ** Configuration
-#+begin_src elisp
-  (require 'elfeed-time)
-#+end_src
 *** Strongly Recommended
 This advice is needed because elfeed doesn't currently have a way to tell it's garbage collector about the elfeed-refs we create with ~elfeed-time-maybe-get-video-info~ and ~elfeed-time-maybe-get-full-content~. Without the advice, the refs in the ~:et-content~ meta slot would be deleted by ~elfeed-db-gc~. For more information see [[https://github.com/skeeto/elfeed/issues/376][this issue]], and [[https://github.com/skeeto/elfeed/pull/457][this pull request]].
 #+begin_src elisp
