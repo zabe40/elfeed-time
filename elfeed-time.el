@@ -142,7 +142,10 @@ This could include headers, footers, advertisements, etc."
                                          ("youtube-dl" . ("--dump-json" "--no-color"))
                                          (t . ("-q")))
   "An alist associating program names to lists of arguments to pass to them.
-The entry with key t is a list of arguments for all programs."
+The entry with key t is a list of arguments for all programs.
+
+For detailed information about the arguments, see man page
+`yt-dlp(1)', man page `yt-dlc(1)', or man page `youtube-dl(1)',"
   :group 'elfeed-time
   :type '(alist :key-type (choice string
                                   (const :tag "Arguments for all programs" t))
@@ -198,7 +201,10 @@ be marked as read."
         "-loglevel" "error"
         "-print_format" "default=noprint_wrappers=1:nokey=1"
         "-show_entries" "format=duration")
-  "A list of arguments for ffprobe to get the length of a file."
+  "A list of arguments for ffprobe to get the length of a file.
+
+For detailed information about the arguments, see man page
+`ffprobe(1)'."
   :group 'elfeed-time
   :type '(repeat string))
 
@@ -598,6 +604,9 @@ Call CONTINUATION when finished."
 (defun elfeed-time-curl-args (url &optional headers method data)
   "Build an argument list for curl for URL.
 URL must be one string.
+
+For detailed information about the arguments see man page
+`curl(1)'.
 
 Adapted from `elfeed-curl--args'"
   (cl-assert (stringp url) t (format "URL must be a single string, instead of %S"
