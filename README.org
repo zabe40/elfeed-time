@@ -2,6 +2,8 @@
 CAUTION: This package is still under development, breaking changes are very possible.
 ** Introduction
 elfeed-time displays the approximate time it will take to read, watch, or listen to an [[https://github.com/skeeto/elfeed/][elfeed]] entry. It can display this information in both ~elfeed-search-mode~, and ~elfeed-show-mode~.
+#+CAPTION: An screenshot of how ~elfeed-time-search-print-entry~ looks.
+#+CAPTION: The theme used in this screenshot is kaolin-aurora from the gorgeous [[https://github.com/ogdenwebb/emacs-kaolin-themes][Kaolin Themes]], and the font used is [[https://connary.com/cartograph.html][Cartograph CF]].
 #+html: <img src="https://i.imgur.com/MsSnK61.png">
 *** Features
 elfeed-time can measure the length of:
