@@ -71,3 +71,5 @@ elfeed-time can also account for the fact that you might play some of your video
  * yt-dlp currently doesn't have a way to access the localized title of a video, see [[https://github.com/yt-dlp/yt-dlp/issues/387][this issue]].
 ** Epistemological Limitations
 elfeed-time cannot account for time spent pondering, note-taking, cross-referencing, rereading, grappling with, examining, or otherwise thinking about entries.
+** Contributing
+Feel free to open an issue or pull request for any type of entry that isn't yet supported by elfeed-time!
