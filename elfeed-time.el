@@ -173,11 +173,11 @@ For detailed information about the arguments, see man page
         ;; loathe to add to anything but `elfeed-new-entry-hook'.
         (cons (rx "@" (group (+ (not whitespace))))
               #'elfeed-time-youtube-channel-link))
-  "An alist associating regexps to functions to return a URL for the matched regexp.
+  "An alist associating regexps to functions that return a URL.
 The functions are called with two arguments, the STRING that was
-matched, and the ENTRY the description belongs to. Functions can
-also access the results of the regexp match using `match-string'
-and the like."
+matched, and the ENTRY the description belongs to. Functions
+should access the results of the regexp match using
+`match-string' and the like."
   :group 'elfeed-time
   :type '(alist :key-type regexp :value-type function))
 
