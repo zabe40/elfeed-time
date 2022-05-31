@@ -44,7 +44,6 @@
 (require 'dom)
 (require 'shr)
 (require 'cl-lib)
-(require 'ietf-drums)
 (require 'iso8601)
 
 (defgroup elfeed-time nil
@@ -488,7 +487,7 @@ Call CONTINUATION when finished."
   "Parse the HTML in BUFFER to determine when ENTRY goes live.
 Call CONTINUATION when finished."
   (with-current-buffer buffer
-    (elfeed-time--delete-http-header)
+    (elfeed-time--delete-http-headers)
     (goto-char (point-min))
     (when (re-search-forward (rx "\"startTimestamp\":\""
                                  (group (1+ (not "\""))) "\"")
@@ -635,17 +634,19 @@ Adapted from `elfeed-curl--args'"
     (setf args (nconc (reverse elfeed-curl-extra-arguments) args))
     (nreverse (cons url args))))
 
-(defun elfeed-time--delete-http-header ()
-  "Delete the HTTP header from the current buffer."
-  (delete-region (point-min)
-                 (save-restriction
-                   (ietf-drums-narrow-to-header)
-                   (point-max))))
+(defun elfeed-time--delete-http-headers ()
+  "Narrow the current buffer to exclude all HTTP headers."
+  (save-excursion
+    (goto-char (point-min))
+    (while (re-search-forward (rx (+ bol (+ (not ?\r)) "\r\n")
+                                  "\r\n")
+                              nil t)
+      (narrow-to-region (match-end 0) (point-max)))))
 
 (defun elfeed-time--set-full-content (entry buffer continuation)
   "Set ENTRY's content to BUFFER, then call CONTINUATION."
   (with-current-buffer buffer
-    (elfeed-time--delete-http-header)
+    (elfeed-time--delete-http-headers)
     (setf (elfeed-meta entry :et-content) (elfeed-ref (buffer-string))
           (elfeed-meta entry :et-content-type) 'html)
     (elfeed-untag entry elfeed-time-preview-tag)
