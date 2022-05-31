@@ -80,8 +80,8 @@ For information on possible specifiers, see `format-seconds'."
   "The maximum number of seconds the longest entry is expected to be.
 This also means the longest a premiere is expected to be
 announced in advance. This variable is used to control the width
-of the time column in combination
-with`elfeed-time-format-seconds-max-length' in
+of the time column in combination with
+`elfeed-time-format-seconds-max-length' in
 `elfeed-time-search-print-entry'."
   :group 'elfeed-time
   :type 'number)
