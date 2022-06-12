@@ -1,5 +1,10 @@
 * elfeed-time
 CAUTION: This package is still under development, breaking changes are very possible.
+#+begin_quote
+“[[https://www.youtube.com/watch?v=Z6_ZNW1DACE][Too Long...]]”
+
+-- Daft Punk, on podcast lengths
+#+end_quote
 ** Introduction
 elfeed-time displays the approximate time it will take to read, watch, or listen to an [[https://github.com/skeeto/elfeed/][elfeed]] entry. It can display this information in both ~elfeed-search-mode~, and ~elfeed-show-mode~.
 #+CAPTION: An screenshot of how ~elfeed-time-search-print-entry~ looks.
