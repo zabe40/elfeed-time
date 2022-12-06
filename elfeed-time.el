@@ -474,7 +474,7 @@ Call CONTINUATION when finished."
                                 (throw 'unknown-error nil))))
                         ((rx "finished")
                          (goto-char (point-min))
-                         (while (re-search-forward (rx bol "WARNING: " (group (+ not-newline)) eol) nil t)
+                         (while (re-search-forward (rx bol "WARNING: " (group (+ (not "{"))) eol) nil t)
                            (elfeed-time-log 'warn entry "%s" (match-string 1)))
                          (let ((video-data (json-parse-buffer)))
                            (setf (elfeed-meta entry :et-length-in-seconds)
