@@ -730,9 +730,11 @@ Call CONTINUATION when finished."
              (base (elfeed-compute-base (elfeed-feed-url feed))))
         (with-temp-buffer
           (insert (elfeed-deref content))
-          (setf (buffer-string)
-                (elfeed-time-make-html-readable (buffer-string)
-                                                (and feed base)))
+          (insert
+           (prog1
+               (elfeed-time-make-html-readable (buffer-string)
+                                               (and feed base))
+             (erase-buffer)))
           (setf (elfeed-meta entry :et-content)
                 (elfeed-ref (buffer-string)))
           (elfeed-untag entry elfeed-time-unreadable-tag)))))
