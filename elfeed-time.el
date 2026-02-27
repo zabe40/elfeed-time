@@ -271,11 +271,10 @@ CONTENT-TYPE, and BASE-URL, altered as desired."
   :type 'hook)
 
 (defface elfeed-time-display '((t :inherit (elfeed-search-unread-count-face)))
-  "Face for displaying the amount of time it takes to read,
-watch, or listen to an entry.")
+  "Face to display how long it takes to read, watch, or listen to an entry.")
 
 (defface elfeed-time-sum '((t :inherit (elfeed-search-unread-count-face)))
-  "Face for displaying the sum of times of entries.")
+  "Face to display the sum of times of entries.")
 
 (defvar elfeed-time-ffprobe-format-cache ()
   "A list of file/url extensions supported by ffprobe.")
