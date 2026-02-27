@@ -31,6 +31,7 @@
 ;; * Youtube videos
 ;; * Youtube premieres
 ;; * podcasts
+;; * newsletters
 ;; * and of course text (including feeds that only give a preview)
 ;;
 ;; For more information about elfeed-time, see README.org
@@ -69,6 +70,11 @@ A value of nil means normal speed, that is, 1."
          (if (and (numberp value) (zerop value))
              (user-error "%S must not be zero" symbol)
            (set symbol value))))
+
+(defcustom elfeed-time-newsletter-seconds-per-link 10
+  "The estimated amount of time to view one link in a newsletter."
+  :group 'elfeed-time
+  :type 'number)
 
 (defcustom elfeed-time-format-string "%h:%z%.2m:%.2s"
   "The format control string for displaying times for entries.
@@ -111,6 +117,11 @@ For information on possible specifiers, see
 (defcustom elfeed-time-unreadable-tag 'unreadable
   "A tag for entries whose content contains extraneous elements.
 This could include headers, footers, advertisements, etc."
+  :group 'elfeed-time
+  :type 'symbol)
+
+(defcustom elfeed-time-newsletter-tag 'newsletter
+  "A tag for newsletter entries, whose content is primarily a collection of links."
   :group 'elfeed-time
   :type 'symbol)
 
@@ -240,6 +251,7 @@ take a long time, including network requests, etc."
              elfeed-time-maybe-get-podcast-info
              elfeed-time-maybe-get-full-content
              elfeed-time-maybe-make-entry-readable
+             elfeed-time-maybe-count-newsletter-links
              elfeed-time-count-entry-words))
 
 (defcustom elfeed-time-entry-time-functions nil
@@ -260,6 +272,7 @@ especially if returning nil."
   :options '(elfeed-time-video-time
              elfeed-time-premiere-time
              elfeed-time-podcast-time
+             elfeed-time-newsletter-time
              elfeed-time-text-time))
 
 (defcustom elfeed-time-preprocess-functions nil
@@ -740,6 +753,33 @@ Call CONTINUATION when finished."
           (elfeed-untag entry elfeed-time-unreadable-tag)))))
   (funcall (car continuation) entry (cdr continuation)))
 
+(defun elfeed-time-maybe-count-newsletter-links (entry &optional continuation)
+  "Count the number of links in ENTRY, storing it for later.
+Call CONTINUATION when finished."
+  (interactive (list (elfeed-time-current-entries nil)))
+  (setf continuation (or continuation (list #'ignore)))
+  (when (elfeed-tagged-p elfeed-time-newsletter-tag entry)
+    (let* ((meta-content-p (elfeed-meta entry :et-content))
+           (type (if meta-content-p
+                     (elfeed-meta entry :et-content-type)
+                   (elfeed-entry-content-type entry)))
+           (feed (elfeed-entry-feed entry))
+           (content (elfeed-deref (if meta-content-p
+                                      (elfeed-meta entry :et-content)
+                                    (elfeed-entry-content entry))))
+           (base (and feed (elfeed-compute-base (elfeed-feed-url feed))))
+           (number-of-links 0))
+      (with-temp-buffer
+        (when content
+          (if (eq type 'html)
+              (elfeed-insert-html content base)
+            (insert content)))
+        (goto-char (point-min))
+        (while (text-property-search-forward 'shr-tab-stop nil nil t)
+          (cl-incf number-of-links))
+        (setf (elfeed-meta entry :et-link-count) number-of-links))))
+  (funcall (car continuation) entry (cdr continuation)))
+
 (defun elfeed-time-count-entry-words (entry &optional continuation)
   "Add the word count of ENTRY to the entry's metadata.
 Call CONTINUATION when finished.
@@ -864,6 +904,13 @@ non-zero, then return SECONDS unchanged."
              (enclosures (cl-remove-if-not #'numberp all-enclosures))
              (length (cl-reduce elfeed-time-enclosure-reduce-function enclosures)))
     (elfeed-time-scale-entry-time entry length)))
+
+(defun elfeed-time-newsletter-time (entry)
+  "Return the length of ENTRY as a newsletter in seconds."
+  (let ((links (elfeed-meta entry :et-link-count)))
+    (when (numberp links)
+      (+ (* links elfeed-time-newsletter-seconds-per-link)
+         (or (elfeed-time-text-time entry) 0)))))
 
 (defun elfeed-time-text-time (entry)
   "Return the length of ENTRY as derived from it's word count."
