@@ -5,7 +5,7 @@
 ;; Author: zabe <zabe@disroot.org>
 ;; URL: https://github.com/zabe40/elfeed-time
 ;; Version: 0.1
-;; Package-Requires: ((emacs "27.1") (elfeed "3.4.1"))
+;; Package-Requires: ((emacs "27.1") (elfeed "0479d994a46f52c6fcc234d748ab54248e766a51"))
 ;; Keywords: comm
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -291,54 +291,6 @@ CONTENT-TYPE, and BASE-URL, altered as desired."
 
 (defvar elfeed-time-ffprobe-format-cache ()
   "A list of file/url extensions supported by ffprobe.")
-
-(defvar elfeed-time-gc-functions nil
-  "A list of functions called to determine which elfeed-refs are reachable.
-Each function must take an elfeed-entry and return a single
-elfeed-ref or a list of them, which will be considered in-use by
-`elfeed-db-gc'.")
-
-;;;###autoload
-(defun elfeed-time-db-gc-trace-meta (&optional stats-p)
-  "Clean up unused content from the content database.
-If STATS is true, return the space cleared in bytes."
-  (elfeed-db-gc-empty-feeds)
-  (let* ((data (expand-file-name "data" elfeed-db-directory))
-         (dirs (directory-files data t "^[0-9a-z]\\{2\\}$"))
-         (ids (cl-mapcan (lambda (d) (directory-files d nil nil t)) dirs))
-         (table (make-hash-table :test 'equal)))
-    (dolist (id ids)
-      (setf (gethash id table) nil))
-    (with-elfeed-db-visit (entry _)
-      (let ((content (elfeed-entry-content entry)))
-        (when (elfeed-ref-p content)
-          (setf (gethash (elfeed-ref-id content) table) t)))
-      (dolist (trace-function elfeed-time-gc-functions)
-        (let ((refs (funcall trace-function entry)))
-          (unless (listp refs)
-            (setf refs (list refs)))
-          (dolist (ref refs)
-            (when (elfeed-ref-p ref)
-              (setf (gethash (elfeed-ref-id ref) table) t))))))
-    (cl-loop for id hash-keys of table using (hash-value used)
-             for used-p = (or used (member id '("." "..")))
-             when (and (not used-p) stats-p)
-             sum (let* ((ref (elfeed-ref--create :id id))
-                        (file (elfeed-ref--file ref)))
-                   (* 1.0 (nth 7 (file-attributes file))))
-             unless used-p
-             do (elfeed-ref-delete (elfeed-ref--create :id id))
-             finally (cl-loop for dir in dirs
-                              when (elfeed-directory-empty-p dir)
-                              do (delete-directory dir)))))
-
-;;;###autoload
-(defun elfeed-time-entry-meta-content (entry)
-  "Return the elfeed-ref in ENTRY's content meta slot."
-  (elfeed-meta entry :et-content))
-
-;;;###autoload
-(add-hook 'elfeed-time-gc-functions #'elfeed-time-entry-meta-content)
 
 (defun elfeed-time-current-entries (multiple-entries-p)
   "Return the current selected entry or entries in either elfeed mode.
