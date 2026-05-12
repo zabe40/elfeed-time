@@ -887,42 +887,42 @@ Use MAX-SECONDS as the largest time to expect."
   "Print ENTRY to the `elfeed-search-mode' buffer.
 
  Adapted from `elfeed-search-print-entry--default'"
-  (let* ((date (elfeed-search-format-date (elfeed-entry-date entry)))
-         (title (or (elfeed-meta entry :title) (elfeed-entry-title entry) ""))
-         (title-faces (elfeed-search--faces (elfeed-entry-tags entry)))
+  (let* ((tags (elfeed-entry-tags entry))
+         (date-float (elfeed-entry-date entry))
+         (date-str (elfeed-search-format-date date-float))
+         (title (or (elfeed-meta--title entry) ""))
+         (title-faces (elfeed-search--faces tags))
          (feed (elfeed-entry-feed entry))
-         (feed-title
-          (when feed
-            (or (elfeed-meta feed :title) (elfeed-feed-title feed))))
-         (tags (mapcar #'symbol-name (elfeed-entry-tags entry)))
-         (tags-str (mapconcat
-                    (lambda (s) (propertize s 'face 'elfeed-search-tag-face))
-                    tags ","))
-         (title-width (- (window-width) 10 elfeed-search-trailing-width))
+         (feed-title (and feed (elfeed-meta--title feed)))
+         (window (get-buffer-window))
+         (title-width (- (if window (window-width window) (frame-width))
+		         10 elfeed-search-trailing-width))
          (title-column (bidi-string-mark-left-to-right
                         (elfeed-format-column
-                         title (elfeed-clamp
-                                elfeed-search-title-min-width
-                                title-width
-                                elfeed-search-title-max-width)
-                         :left)))
-         (time (elfeed-format-column (elfeed-time-format-seconds (concat elfeed-time-format-string " ")
-                                                                 (elfeed-time-compute-entry-time entry))
-                                     (1+ (elfeed-time-format-seconds-max-length elfeed-time-format-string
-                                                                                elfeed-time-max-format-seconds))
-                                     :right)))
-    (insert (propertize date 'face 'elfeed-search-date-face) " ")
-    ;; The faces are reversed so that faces earlier in
-    ;; `elfeed-search-face-alist' are applied later, and thus
-    ;; override faces already added
-    (dolist (face (reverse title-faces))
-      (add-face-text-property 0 (length title-column) face nil title-column))
-    (insert (propertize title-column 'kbd-help title) " ")
+		         title (elfeed-clamp
+			        elfeed-search-title-min-width
+			        title-width
+			        elfeed-search-title-max-width)
+		         :left)))
+         (time (elfeed-format-column
+                (elfeed-time-format-seconds (concat elfeed-time-format-string " ")
+                                            (elfeed-time-compute-entry-time entry))
+                (1+ (elfeed-time-format-seconds-max-length elfeed-time-format-string
+                                                           elfeed-time-max-format-seconds))
+                :right)))
+    (insert (elfeed-add-properties date-str
+				   'face 'elfeed-search-date-face
+				   'mouse-face 'highlight 'elfeed-date date-float)
+	    " "
+	    (elfeed-add-properties title-column
+				   'face title-faces 'kbd-help title
+				   'mouse-face 'highlight 'elfeed-entry-title t))
     (insert (propertize time 'face 'elfeed-time-display))
     (when feed-title
-      (insert (propertize feed-title 'face 'elfeed-search-feed-face) " "))
+      (insert " " (propertize feed-title 'face 'elfeed-search-feed-face
+			      'mouse-face 'highlight 'elfeed-feed feed)))
     (when tags
-      (insert "(" tags-str ")"))))
+      (insert " (" (elfeed-search--format-tags tags) ")"))))
 
 (defun elfeed-time-preprocess-content-readable (_entry content content-type base)
   "Return the readable version of CONTENT, if CONTENT-TYPE is html.
@@ -1039,35 +1039,36 @@ Adapted from `elfeed-show-refresh--mail-style'"
          (feed (elfeed-entry-feed elfeed-show-entry))
          (feed-title (elfeed-feed-title feed))
          (base (and feed (elfeed-compute-base (elfeed-feed-url feed)))))
+    (setq list-buffers-directory title)
     (erase-buffer)
-    (insert (format (propertize "Title: %s\n" 'face 'message-header-name)
-                    (propertize title 'face 'message-header-subject)))
+    (insert (format (propertize "Title: %s\n" 'face 'elfeed-show-entry-header-face)
+		    (propertize title 'face 'elfeed-show-entry-title-face)))
     (when elfeed-show-entry-author
       (dolist (author authors)
         (let ((formatted (elfeed--show-format-author author)))
-          (insert
-           (format (propertize "Author: %s\n" 'face 'message-header-name)
-                   (propertize formatted 'face 'message-header-to))))))
-    (insert (format (propertize "Date: %s\n" 'face 'message-header-name)
-                    (propertize nicedate 'face 'message-header-other)))
-    (insert (format (propertize "Feed: %s\n" 'face 'message-header-name)
-                    (propertize feed-title 'face 'message-header-other)))
+	  (insert
+	   (format (propertize "Author: %s\n" 'face 'elfeed-show-entry-header-face)
+		   (propertize formatted 'face 'elfeed-show-entry-author-face))))))
+    (insert (format (propertize "Date: %s\n" 'face 'elfeed-show-entry-header-face)
+		    (propertize nicedate 'face 'elfeed-show-entry-date-face)))
+    (insert (format (propertize "Feed: %s\n" 'face 'elfeed-show-entry-header-face)
+		    (propertize feed-title 'face 'elfeed-show-entry-feed-face)))
     (when tags
-      (insert (format (propertize "Tags: %s\n" 'face 'message-header-name)
-                      (propertize tagsstr 'face 'message-header-other))))
-    (insert (format (propertize "Time: %s\n" 'face 'message-header-name)
+      (insert (format (propertize "Tags: %s\n" 'face 'elfeed-show-entry-header-face)
+		      (propertize tagsstr 'face 'elfeed-show-entry-tags-face))))
+    (insert (format (propertize "Time: %s\n" 'face 'elfeed-show-entry-header-face)
                     (propertize (elfeed-time-format-seconds
                                  elfeed-time-format-string
                                  (elfeed-time-compute-entry-time
                                   elfeed-show-entry))
-                                'face 'message-header-other)))
-    (insert (propertize "Link: " 'face 'message-header-name))
+                                'face 'elfeed-show-entry-feed-face)))
+    (insert (propertize "Link: " 'face 'elfeed-show-entry-header-face))
     (elfeed-insert-link link link)
     (insert "\n")
     (cl-loop for enclosure in (elfeed-entry-enclosures elfeed-show-entry)
-             do (insert (propertize "Enclosure: " 'face 'message-header-name))
-             do (elfeed-insert-link (car enclosure))
-             do (insert "\n"))
+	     do (insert (propertize "Enclosure: " 'face 'elfeed-show-entry-header-face))
+	     do (elfeed-insert-link (car enclosure))
+	     do (insert "\n"))
     (insert "\n")
     (if content
         (progn (run-hook-wrapped
