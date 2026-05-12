@@ -140,26 +140,18 @@ This could include headers, footers, advertisements, etc."
   :group 'elfeed-time
   :type 'symbol)
 
-(defcustom elfeed-time-youtube-dl-program (or (executable-find "yt-dlp")
-                                              (executable-find "yt-dlc")
-                                              (executable-find "youtube-dl"))
+(defcustom elfeed-time-youtube-dl-program (executable-find "yt-dlp")
   "The location of the program used to get video info."
   :group 'elfeed-time
   :type 'string)
 
-(defcustom elfeed-time-youtube-dl-args '(("yt-dlp" . ("--print" "%()j" "--no-colors"))
-                                         ("yt-dlc" . ("--dump-json" "--no-color"))
-                                         ("youtube-dl" . ("--dump-json" "--no-color"))
-                                         (t . ("-q")))
-  "An alist associating program names to lists of arguments to pass to them.
-The entry with key t is a list of arguments for all programs.
+(defcustom elfeed-time-youtube-dl-args '("--print" "%()j" "--no-colors" "-q")
+  "A list of arguments to pass to `elfeed-time-youtube-dl-program'.
 
 For detailed information about the arguments, see man page
-`yt-dlp(1)', man page `yt-dlc(1)', or man page `youtube-dl(1)',"
+`yt-dlp(1)'."
   :group 'elfeed-time
-  :type '(alist :key-type (choice string
-                                  (const :tag "Arguments for all programs" t))
-                :value-type (repeat string)))
+  :type '(repeat string))
 
 (defcustom elfeed-time-youtube-description-link-regexp-alist
   (list (cons (rx bow "http" (opt "s") "://" (+ (not whitespace)))
@@ -373,14 +365,6 @@ Only TYPEs of :atom are supported for now."
       (:atom (setf (elfeed-meta entry :et-content) (elfeed-ref (xml-query '(group description *) xml))
                    (elfeed-meta entry :et-content-type) 'youtube-description-markup)))))
 
-(cl-defun elfeed-time-youtube-dl-args (&optional (program elfeed-time-youtube-dl-program))
-  "Return a list of arguments to pass to PROGRAM.
-PROGRAM defaults to `elfeed-time-youtube-dl-program'."
-  (append (alist-get t elfeed-time-youtube-dl-args)
-          (alist-get (file-name-base program)
-                     elfeed-time-youtube-dl-args
-                     nil nil #'equal)))
-
 (defun elfeed-time-maybe-get-video-info (entry continuation)
   "Get ENTRY's length as a video if it is one.
 Call CONTINUATION when finished."
@@ -399,7 +383,7 @@ Call CONTINUATION when finished."
                                  (elfeed-entry-link entry)))
                 :command (cl-list* elfeed-time-youtube-dl-program
                                    (elfeed-entry-link entry)
-                                   (elfeed-time-youtube-dl-args))
+                                   elfeed-time-youtube-dl-args)
                 :connection-type 'pipe
                 :noquery t
                 :sentinel

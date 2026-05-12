@@ -22,7 +22,7 @@ elfeed-time can measure the length of:
 #+end_src
 *** Optional dependencies
 1. [[https://curl.se/][curl]]
-2. One of: [[https://github.com/yt-dlp/yt-dlp][yt-dlp]], [[https://github.com/ytdl-org/youtube-dl][youtube-dl]], or [[https://github.com/blackjack4494/yt-dlc][yt-dlc]]
+2. [[https://github.com/yt-dlp/yt-dlp][yt-dlp]]
 3. [[https://ffmpeg.org/ffprobe.html][ffprobe]]
 ** Configuration
 *** Recommended
