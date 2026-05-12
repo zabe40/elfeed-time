@@ -1,10 +1,10 @@
 ;;; elfeed-time.el --- Display an entry's length in elfeed -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2021,2022 zabe
+;; Copyright (C) 2021-2026 zabe
 
 ;; Author: zabe <zabe@disroot.org>
 ;; URL: https://github.com/zabe40/elfeed-time
-;; Version: 0.1
+;; Version: 0.2
 ;; Package-Requires: ((emacs "27.1") (elfeed "0479d994a46f52c6fcc234d748ab54248e766a51"))
 ;; Keywords: comm
 
