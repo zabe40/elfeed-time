@@ -160,19 +160,13 @@ For detailed information about the arguments, see man page
                   (group (** 1 2 digit)) ":"
                   (group digit digit))
               #'elfeed-time-youtube-timestamp-link)
-        ;; A known issue is that youtube hashtags cannot be solely
-        ;; numeric AND less than two characters long but this regexp
-        ;; matches those invalid hashtags. I think we might need
-        ;; something stronger than a regular expression to properly
-        ;; parse these, but since an easy workaround is simply to
-        ;; avoid clicking the invalid hashtags, I'm fine with leaving
-        ;; this as is.
-        (cons (rx "#" (group (+ (not whitespace))))
+        (cons (rx "#" (group (or (>= 2 (not whitespace))
+                                 (not (any digit whitespace)))))
               #'elfeed-time-youtube-hashtag-link)
-        ;; Similarly, this regexp is also over-eager, and matches
-        ;; handles that aren't existing youtube channel names. I don't
-        ;; see a way to fix this without a network request, which I'm
-        ;; loathe to add to anything but `elfeed-new-entry-hook'.
+        ;; This regexp is over-eager, and matches handles that aren't
+        ;; existing youtube channel names. I don't see a way to fix
+        ;; this without a network request, which I'm loathe to add to
+        ;; anything but `elfeed-new-entry-hook'.
         (cons (rx "@" (group (+ (not whitespace))))
               #'elfeed-time-youtube-channel-link))
   "An alist associating regexps to functions that return a URL.
