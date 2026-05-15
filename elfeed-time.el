@@ -890,7 +890,10 @@ Use MAX-SECONDS as the largest time to expect."
   (let* ((tags (elfeed-entry-tags entry))
          (date-float (elfeed-entry-date entry))
          (date-str (elfeed-search-format-date date-float))
-         (title (or (elfeed-meta--title entry) ""))
+         (title (elfeed-meta--title entry))
+         (title (if (or (not title) (equal title ""))
+		    (elfeed-entry-link entry)
+		  title))
          (title-faces (elfeed-search--faces tags))
          (feed (elfeed-entry-feed entry))
          (feed-title (and feed (elfeed-meta--title feed)))
@@ -912,15 +915,19 @@ Use MAX-SECONDS as the largest time to expect."
                 :right)))
     (insert (elfeed-add-properties date-str
 				   'face 'elfeed-search-date-face
-				   'mouse-face 'highlight 'elfeed-date date-float)
+				   'mouse-face 'highlight
+				   'elfeed-date date-float
+				   'follow-link [elfeed-date])
 	    " "
 	    (elfeed-add-properties title-column
 				   'face title-faces 'kbd-help title
-				   'mouse-face 'highlight 'elfeed-entry-title t))
+				   'mouse-face 'highlight
+				   'follow-link [elfeed-entry]))
     (insert (propertize time 'face 'elfeed-time-display))
     (when feed-title
       (insert " " (propertize feed-title 'face 'elfeed-search-feed-face
-			      'mouse-face 'highlight 'elfeed-feed feed)))
+			      'mouse-face 'highlight
+			      'follow-link [elfeed-feed])))
     (when tags
       (insert " (" (elfeed-search--format-tags tags) ")"))))
 
