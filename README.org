@@ -15,6 +15,7 @@ elfeed-time can measure the length of:
  * Youtube videos
  * Youtube premieres
  * podcasts
+ * newsletters
  * and of course text (including feeds that only give a preview)
 ** Installation
 #+begin_src elisp
