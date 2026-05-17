@@ -1,5 +1,4 @@
 * elfeed-time
-CAUTION: This package is still under development, breaking changes are very possible.
 #+begin_quote
 “[[https://www.youtube.com/watch?v=Z6_ZNW1DACE][Too Long...]]”
 
