@@ -879,57 +879,37 @@ negative sign. All format specifiers are as in `format-seconds'."
 Use MAX-SECONDS as the largest time to expect."
   (1+ (length (elfeed-time-format-seconds format-string (abs max-seconds)))))
 
-;; TODO account for cjk chars
-;; see "min-width" display specification in emacs 29
-;; https://lars.ingebrigtsen.no/2021/11/24/the-most-controversial-change-in-emacs-history/
+(defun elfeed-time--column-time (entry)
+  "Format the time column for ENTRY, return string."
+  (elfeed-add-properties
+   (elfeed-format-column
+    (bidi-string-mark-left-to-right
+     (elfeed-time-format-seconds (concat elfeed-time-format-string " ")
+                                 (elfeed-time-compute-entry-time entry)))
+    (1+ (elfeed-time-format-seconds-max-length elfeed-time-format-string
+                                               elfeed-time-max-format-seconds))
+    :right)
+   'face 'elfeed-time-display))
+
 ;;;###autoload
 (defun elfeed-time-search-print-entry (entry)
   "Print ENTRY to the `elfeed-search-mode' buffer.
 
  Adapted from `elfeed-search-print-entry--default'"
-  (let* ((tags (elfeed-entry-tags entry))
-         (date-float (elfeed-entry-date entry))
-         (date-str (elfeed-search-format-date date-float))
-         (title (elfeed-meta--title entry))
-         (title (if (or (not title) (equal title ""))
-		    (elfeed-entry-link entry)
-		  title))
-         (title-faces (elfeed-search--faces tags))
-         (feed (elfeed-entry-feed entry))
-         (feed-title (and feed (elfeed-meta--title feed)))
-         (window (get-buffer-window))
-         (title-width (- (if window (window-width window) (frame-width))
-		         10 elfeed-search-trailing-width))
-         (title-column (bidi-string-mark-left-to-right
-                        (elfeed-format-column
-		         title (elfeed-clamp
-			        elfeed-search-title-min-width
-			        title-width
-			        elfeed-search-title-max-width)
-		         :left)))
-         (time (elfeed-format-column
-                (elfeed-time-format-seconds (concat elfeed-time-format-string " ")
-                                            (elfeed-time-compute-entry-time entry))
-                (1+ (elfeed-time-format-seconds-max-length elfeed-time-format-string
-                                                           elfeed-time-max-format-seconds))
-                :right)))
-    (insert (elfeed-add-properties date-str
-				   'face 'elfeed-search-date-face
-				   'mouse-face 'highlight
-				   'elfeed-date date-float
-				   'follow-link [elfeed-date])
-	    " "
-	    (elfeed-add-properties title-column
-				   'face title-faces 'kbd-help title
-				   'mouse-face 'highlight
-				   'follow-link [elfeed-entry]))
-    (insert (propertize time 'face 'elfeed-time-display))
-    (when feed-title
-      (insert " " (propertize feed-title 'face 'elfeed-search-feed-face
-			      'mouse-face 'highlight
-			      'follow-link [elfeed-feed])))
-    (when tags
-      (insert " (" (elfeed-search--format-tags tags) ")"))))
+  (pcase-let ((`(,date . ,date-width) (elfeed-search--column-date entry))
+	      (`(,title . ,title-width) (elfeed-search--column-title entry))
+	      (feed (elfeed-search--column-feed entry))
+	      (tags (elfeed-search--column-tags entry))
+              (time (elfeed-time--column-time entry)))
+    (insert date
+	    (propertize " " 'display `(space :align-to ,(1+ date-width)))
+	    title
+	    (and time (propertize " " 'display
+				  `( space :align-to
+				     ,(+ 2 date-width title-width))))
+            time
+            (and time " ")
+	    feed (and tags " ") tags)))
 
 (defun elfeed-time-preprocess-content-readable (_entry content content-type base)
   "Return the readable version of CONTENT, if CONTENT-TYPE is html.
