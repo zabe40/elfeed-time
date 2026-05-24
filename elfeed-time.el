@@ -1050,9 +1050,9 @@ Adapted from `elfeed-show-refresh--mail-style'"
     (erase-buffer)
     (insert (format (propertize "Title: %s\n" 'face 'elfeed-show-entry-header-face)
 		    (propertize title 'face 'elfeed-show-entry-title-face)))
-    (when elfeed-show-entry-author
+    (when elfeed-show-author
       (dolist (author authors)
-        (let ((formatted (elfeed--show-format-author author)))
+        (let ((formatted (elfeed-show--format-author author)))
 	  (insert
 	   (format (propertize "Author: %s\n" 'face 'elfeed-show-entry-header-face)
 		   (propertize formatted 'face 'elfeed-show-entry-author-face))))))
@@ -1159,8 +1159,8 @@ Adapted from `elfeed-search--header'."
                                  (zerop (elfeed-db-last-update))
                                  (> (elfeed-queue-count-total) 0))
                              "")
-                            ((and elfeed-search-filter-active
-                                  elfeed-search-filter-overflowing)
+                            ((and elfeed-search--filter-active
+                                  elfeed-search--filter-overflowing)
                              "??:?? ")
                             (t
                              (concat (elfeed-time-format-seconds
@@ -1180,7 +1180,7 @@ Adapted from `elfeed-search--header'."
 (defun elfeed-time--set-sort-function (function)
   "Sort the elfeed-search buffer according to FUNCTION immediately."
   (setf elfeed-search-sort-function function)
-  (elfeed-search-update--force))
+  (revert-buffer))
 
 (defun elfeed-time-sort-by-date ()
   "Sort the elfeed-search buffer by date."
@@ -1195,10 +1195,10 @@ Adapted from `elfeed-search--header'."
 (defun elfeed-time-toggle-sort-order ()
   "Reverse the order of the elfeed-search buffer."
   (interactive)
-  (setf elfeed-sort-order (cl-case elfeed-sort-order
-                            (ascending 'descending)
-                            (descending 'ascending)))
-  (elfeed-search-update--force))
+  (setf elfeed-search-sort-order (cl-case elfeed-search-sort-order
+                                   (ascending 'descending)
+                                   (descending 'ascending)))
+  (revert-buffer))
 
 (defun elfeed-time-run-hooks (entries)
   "Run `elfeed-new-entry-hook' for all selected ENTRIES."
